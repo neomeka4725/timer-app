@@ -4,14 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=4 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=5 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
+  <!-- 화면 0: 닉네임 정하기 (처음 들어왔을 때만) -->
+  <section id="nickname-screen" class="screen hidden">
+    <h1>📵 디지털 웰빙 타이머</h1>
+    <p class="subtitle">뭐라고 부를까요?</p>
+
+    <input
+      type="text"
+      id="nickname-input"
+      class="text-input"
+      maxlength="8"
+      placeholder="닉네임 (8자까지)"
+      autocomplete="off"
+    />
+    <p class="notice warning hidden" id="nickname-error">닉네임을 입력해 주세요.</p>
+
+    <button type="button" id="nickname-save-btn" class="primary-btn">시작하기</button>
+    <p class="notice">
+      회원가입 없이 닉네임만 쓰면 돼요.<br />
+      나중에 친구들과 기록을 나눌 때 이 이름으로 보입니다.
+    </p>
+  </section>
+
   <!-- 화면 1: 목표 시간 설정 화면 -->
-  <section id="setup-screen" class="screen">
+  <section id="setup-screen" class="screen hidden">
+    <p class="greeting"><b id="greeting-name"></b>님, 안녕하세요</p>
     <h1>📵 디지털 웰빙 타이머</h1>
     <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
 
@@ -58,7 +81,7 @@
   <section id="stats-screen" class="screen hidden">
     <div class="screen-header">
       <button type="button" id="stats-back-top" class="back-btn" aria-label="돌아가기">←</button>
-      <h2 class="screen-title">📊 내 기록</h2>
+      <h2 class="screen-title">📊 <span id="stats-name"></span>님의 기록</h2>
     </div>
 
     <div class="stat-grid">
@@ -87,10 +110,11 @@
     <ul class="record-list" id="record-list"></ul>
 
     <button type="button" id="stats-back-btn" class="primary-btn">돌아가기</button>
+    <button type="button" id="rename-btn" class="text-btn">✏️ 닉네임 바꾸기</button>
     <button type="button" id="clear-btn" class="secondary-btn">기록 전체 삭제</button>
   </section>
 
-  <script src="storage.js?v=4"></script>
-  <script src="script.js?v=4"></script>
+  <script src="storage.js?v=5"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>

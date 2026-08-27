@@ -3,6 +3,28 @@
 // 앱을 껐다 켜도 남아있다. 다만 기기마다 따로 저장된다.
 
 const STORAGE_KEY = "wellness-timer-records";
+const NICKNAME_KEY = "wellness-timer-nickname";
+
+// 닉네임은 길면 게시판이 지저분해지므로 8자로 자른다.
+const NICKNAME_MAX = 8;
+
+function loadNickname() {
+  try {
+    return localStorage.getItem(NICKNAME_KEY) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function saveNickname(name) {
+  const trimmed = name.trim().slice(0, NICKNAME_MAX);
+  try {
+    localStorage.setItem(NICKNAME_KEY, trimmed);
+  } catch (err) {
+    // 저장에 실패해도 이번 실행 동안은 앱이 계속 돌아가야 한다.
+  }
+  return trimmed;
+}
 
 // 기록 하나의 모양:
 // { at: 저장시각(밀리초), goalMinutes: 목표분, elapsedSeconds: 실제로 버틴 초,

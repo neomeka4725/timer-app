@@ -127,6 +127,31 @@ h1 {
   color: #e5484d;
 }
 
+/* ---- 닉네임 ---- */
+
+.text-input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #d7ddee;
+  border-radius: 14px;
+  background: #fff;
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 12px;
+  /* iOS에서 글자 크기가 16px보다 작으면 입력할 때 화면이 확대된다 */
+  font-family: inherit;
+}
+
+.greeting {
+  margin: 0 0 20px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.greeting b {
+  color: #4c6fff;
+}
+
 /* ---- 내 기록 화면 ---- */
 
 .text-btn {
