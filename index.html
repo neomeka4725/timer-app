@@ -39,6 +39,7 @@
     </p>
 
     <button type="button" id="start-btn" class="primary-btn">시작하기</button>
+    <button type="button" id="stats-btn" class="text-btn">📊 내 기록 보기</button>
   </section>
 
   <!-- 화면 2: 타이머 실행 화면 -->
@@ -51,6 +52,40 @@
     <button type="button" id="restart-btn" class="primary-btn hidden">다시 하기</button>
   </section>
 
+  <!-- 화면 3: 내 기록 화면 -->
+  <section id="stats-screen" class="screen hidden">
+    <h2 class="screen-title">📊 내 기록</h2>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat-value" id="stat-success">0</span>
+        <span class="stat-label">성공</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-fail">0</span>
+        <span class="stat-label">실패</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-rate">0%</span>
+        <span class="stat-label">성공률</span>
+      </div>
+    </div>
+
+    <div class="total-time">
+      누적 집중 시간 <b id="stat-total">0분</b>
+    </div>
+
+    <h3 class="list-title">최근 기록</h3>
+    <p class="notice" id="record-empty">
+      아직 기록이 없어요. 타이머를 끝까지 해보면 여기에 쌓입니다.
+    </p>
+    <ul class="record-list" id="record-list"></ul>
+
+    <button type="button" id="stats-back-btn" class="primary-btn">돌아가기</button>
+    <button type="button" id="clear-btn" class="secondary-btn">기록 전체 삭제</button>
+  </section>
+
+  <script src="storage.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
