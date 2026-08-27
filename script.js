@@ -21,6 +21,7 @@ const statTotal = document.getElementById("stat-total");
 const recordList = document.getElementById("record-list");
 const recordEmpty = document.getElementById("record-empty");
 const statsBackBtn = document.getElementById("stats-back-btn");
+const statsBackTop = document.getElementById("stats-back-top");
 const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
@@ -81,6 +82,8 @@ function showScreen(screen) {
   timerScreen.classList.add("hidden");
   statsScreen.classList.add("hidden");
   screen.classList.remove("hidden");
+  // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
+  window.scrollTo(0, 0);
 }
 
 // ---- 시간 표시 ----
@@ -250,6 +253,7 @@ statsBtn.addEventListener("click", () => {
 });
 
 statsBackBtn.addEventListener("click", () => showScreen(setupScreen));
+statsBackTop.addEventListener("click", () => showScreen(setupScreen));
 
 clearBtn.addEventListener("click", () => {
   if (confirm("기록을 전부 지울까요? 되돌릴 수 없어요.")) {
