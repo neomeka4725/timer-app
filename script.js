@@ -1,10 +1,12 @@
 const setupScreen = document.getElementById("setup-screen");
 const timerScreen = document.getElementById("timer-screen");
+const statsScreen = document.getElementById("stats-screen");
 
 const minutesSlider = document.getElementById("minutes-slider");
 const minutesValue = document.getElementById("minutes-value");
 const quickButtons = document.querySelectorAll(".quick-btn");
 const startBtn = document.getElementById("start-btn");
+const statsBtn = document.getElementById("stats-btn");
 const wakelockWarning = document.getElementById("wakelock-warning");
 
 const runningLabel = document.getElementById("running-label");
@@ -12,8 +14,19 @@ const countdownEl = document.getElementById("countdown");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
-let remainingSeconds = 0;
+const statSuccess = document.getElementById("stat-success");
+const statFail = document.getElementById("stat-fail");
+const statRate = document.getElementById("stat-rate");
+const statTotal = document.getElementById("stat-total");
+const recordList = document.getElementById("record-list");
+const recordEmpty = document.getElementById("record-empty");
+const statsBackBtn = document.getElementById("stats-back-btn");
+const clearBtn = document.getElementById("clear-btn");
+
 let timerId = null;
+let goalSeconds = 0; // 이번 판의 목표 시간(초)
+let endTime = 0; // 끝나야 하는 시각
+let remainingSeconds = 0;
 
 function updateMinutesDisplay() {
   minutesValue.textContent = minutesSlider.value;
@@ -61,23 +74,56 @@ function releaseWakeLock() {
   }
 }
 
+// ---- 화면 전환 ----
+
+function showScreen(screen) {
+  setupScreen.classList.add("hidden");
+  timerScreen.classList.add("hidden");
+  statsScreen.classList.add("hidden");
+  screen.classList.remove("hidden");
+}
+
+// ---- 시간 표시 ----
+
 function formatTime(totalSeconds) {
   const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
   const s = (totalSeconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
 }
 
-function showScreen(screen) {
-  setupScreen.classList.add("hidden");
-  timerScreen.classList.add("hidden");
-  screen.classList.remove("hidden");
+// 누적 시간을 "1시간 25분" 같은 읽기 쉬운 형태로 바꾼다.
+function formatDuration(totalSeconds) {
+  if (totalSeconds === 0) return "0분";
+  // 1분이 안 되면 "45초"처럼 보여줘야 "0분"보다 덜 어색하다.
+  if (totalSeconds < 60) return `${totalSeconds}초`;
+
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}시간 ${minutes}분`;
+  return `${totalMinutes}분`;
 }
 
+function formatDate(ms) {
+  return new Date(ms).toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// ---- 타이머 ----
+
 function startTimer() {
-  remainingSeconds = Number(minutesSlider.value) * 60;
+  goalSeconds = Number(minutesSlider.value) * 60;
+  remainingSeconds = goalSeconds;
+  // 실제 시계를 기준으로 계산해야 시간이 밀리지 않는다.
+  endTime = Date.now() + goalSeconds * 1000;
+
   countdownEl.textContent = formatTime(remainingSeconds);
-  runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
   countdownEl.classList.remove("failed");
+  runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
 
@@ -85,39 +131,50 @@ function startTimer() {
   requestWakeLock();
 
   timerId = setInterval(() => {
-    remainingSeconds -= 1;
+    remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
     countdownEl.textContent = formatTime(remainingSeconds);
 
     if (remainingSeconds <= 0) {
       finishTimer();
     }
-  }, 1000);
+  }, 250);
+}
+
+// 타이머를 멈추고 기록을 남기는 공통 처리.
+function stopTimer(result) {
+  clearInterval(timerId);
+  timerId = null;
+  releaseWakeLock();
+
+  const elapsedSeconds =
+    result === "success" ? goalSeconds : goalSeconds - remainingSeconds;
+
+  saveRecord({
+    at: Date.now(),
+    goalMinutes: goalSeconds / 60,
+    elapsedSeconds: elapsedSeconds,
+    result: result,
+  });
+
+  cancelBtn.classList.add("hidden");
+  restartBtn.classList.remove("hidden");
 }
 
 function finishTimer() {
-  clearInterval(timerId);
-  timerId = null;
-  releaseWakeLock();
+  stopTimer("success");
   runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
-  cancelBtn.classList.add("hidden");
-  restartBtn.classList.remove("hidden");
 }
 
 function failTimer() {
-  clearInterval(timerId);
-  timerId = null;
-  releaseWakeLock();
+  stopTimer("left");
   runningLabel.textContent = "😢 화면을 벗어나서 실패했어요";
   countdownEl.classList.add("failed");
-  cancelBtn.classList.add("hidden");
-  restartBtn.classList.remove("hidden");
 }
 
-function cancelTimer() {
-  clearInterval(timerId);
-  timerId = null;
-  releaseWakeLock();
-  showScreen(setupScreen);
+function giveUpTimer() {
+  stopTimer("gaveup");
+  runningLabel.textContent = "🏳️ 포기했어요";
+  countdownEl.classList.add("failed");
 }
 
 // 화면이 사용자에게 안 보이게 되면(다른 탭·다른 앱·화면 꺼짐) 실패 처리.
@@ -128,8 +185,77 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+// ---- 내 기록 화면 ----
+
+const RESULT_ICONS = {
+  success: "🎉",
+  left: "😢",
+  gaveup: "🏳️",
+};
+
+const RESULT_TEXTS = {
+  success: "성공",
+  left: "화면 이탈",
+  gaveup: "포기",
+};
+
+function renderStats() {
+  const records = loadRecords();
+  const summary = summarize(records);
+
+  statSuccess.textContent = summary.successCount;
+  statFail.textContent = summary.failCount;
+  statRate.textContent = `${summary.successRate}%`;
+  statTotal.textContent = formatDuration(summary.totalSeconds);
+
+  // 최근 기록 10개를 최신순으로 보여준다.
+  const recent = records.slice(-10).reverse();
+  recordEmpty.classList.toggle("hidden", recent.length > 0);
+
+  recordList.innerHTML = "";
+  recent.forEach((record) => {
+    const li = document.createElement("li");
+
+    const icon = document.createElement("span");
+    icon.className = "record-icon";
+    icon.textContent = RESULT_ICONS[record.result] || "•";
+
+    const main = document.createElement("div");
+    main.className = "record-main";
+    main.textContent =
+      `${record.goalMinutes}분 목표 · ` +
+      `${formatDuration(record.elapsedSeconds)} 집중 · ` +
+      `${RESULT_TEXTS[record.result] || ""}`;
+
+    const date = document.createElement("div");
+    date.className = "record-date";
+    date.textContent = formatDate(record.at);
+    main.appendChild(date);
+
+    li.appendChild(icon);
+    li.appendChild(main);
+    recordList.appendChild(li);
+  });
+}
+
+// ---- 버튼 연결 ----
+
 startBtn.addEventListener("click", startTimer);
-cancelBtn.addEventListener("click", cancelTimer);
+cancelBtn.addEventListener("click", giveUpTimer);
 restartBtn.addEventListener("click", () => showScreen(setupScreen));
+
+statsBtn.addEventListener("click", () => {
+  renderStats();
+  showScreen(statsScreen);
+});
+
+statsBackBtn.addEventListener("click", () => showScreen(setupScreen));
+
+clearBtn.addEventListener("click", () => {
+  if (confirm("기록을 전부 지울까요? 되돌릴 수 없어요.")) {
+    clearRecords();
+    renderStats();
+  }
+});
 
 updateMinutesDisplay();

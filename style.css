@@ -127,6 +127,98 @@ h1 {
   color: #e5484d;
 }
 
+/* ---- 내 기록 화면 ---- */
+
+.text-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.screen-title {
+  font-size: 1.4rem;
+  margin-bottom: 24px;
+}
+
+.stat-grid {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  flex: 1;
+  padding: 16px 0;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e5e9f2;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.total-time {
+  padding: 14px;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: #4338ca;
+  margin-bottom: 28px;
+}
+
+.total-time b {
+  font-size: 1.15rem;
+}
+
+.list-title {
+  font-size: 1rem;
+  text-align: left;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.record-list {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  text-align: left;
+}
+
+.record-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px;
+  border-bottom: 1px solid #eef0f6;
+  font-size: 0.95rem;
+}
+
+.record-icon {
+  font-size: 1.1rem;
+}
+
+.record-main {
+  flex: 1;
+}
+
+.record-date {
+  color: #9aa2b4;
+  font-size: 0.8rem;
+}
+
 /* 화면 꺼짐 방지를 지원하지 않는 기기에만 보이는 경고 */
 .notice.warning {
   color: #b45309;
