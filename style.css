@@ -132,16 +132,41 @@ h1 {
 .text-btn {
   width: 100%;
   margin-top: 12px;
-  padding: 12px 0;
-  border: none;
-  background: none;
-  color: #6b7280;
-  font-size: 0.95rem;
+  padding: 14px 0;
+  border: 1px solid #d7ddee;
+  border-radius: 14px;
+  background: #fff;
+  color: #4c6fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* 기록 화면 맨 위: 뒤로가기 + 제목 */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.back-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d7ddee;
+  border-radius: 12px;
+  background: #fff;
+  color: #1c2333;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .screen-title {
+  flex: 1;
   font-size: 1.4rem;
-  margin-bottom: 24px;
+  margin: 0;
+  /* 뒤로가기 버튼만큼 오른쪽에 여백을 줘서 제목이 가운데 오게 한다 */
+  padding-right: 40px;
 }
 
 .stat-grid {

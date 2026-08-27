@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- 주소 뒤의 ?v=4 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+       파일을 고칠 때마다 이 숫자를 올린다. -->
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -54,7 +56,10 @@
 
   <!-- 화면 3: 내 기록 화면 -->
   <section id="stats-screen" class="screen hidden">
-    <h2 class="screen-title">📊 내 기록</h2>
+    <div class="screen-header">
+      <button type="button" id="stats-back-top" class="back-btn" aria-label="돌아가기">←</button>
+      <h2 class="screen-title">📊 내 기록</h2>
+    </div>
 
     <div class="stat-grid">
       <div class="stat">
@@ -85,7 +90,7 @@
     <button type="button" id="clear-btn" class="secondary-btn">기록 전체 삭제</button>
   </section>
 
-  <script src="storage.js"></script>
-  <script src="script.js"></script>
+  <script src="storage.js?v=4"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
