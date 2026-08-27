@@ -114,3 +114,15 @@ h1 {
 #timer-screen .primary-btn {
   margin-top: 16px;
 }
+
+.notice {
+  font-size: 0.85rem;
+  color: #8a93a6;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* 실패했을 때 남은 시간을 빨간색으로 */
+.countdown.failed {
+  color: #e5484d;
+}

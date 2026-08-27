@@ -46,6 +46,7 @@ function startTimer() {
   remainingSeconds = Number(minutesSlider.value) * 60;
   countdownEl.textContent = formatTime(remainingSeconds);
   runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
+  countdownEl.classList.remove("failed");
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
 
@@ -69,11 +70,28 @@ function finishTimer() {
   restartBtn.classList.remove("hidden");
 }
 
+function failTimer() {
+  clearInterval(timerId);
+  timerId = null;
+  runningLabel.textContent = "😢 화면을 벗어나서 실패했어요";
+  countdownEl.classList.add("failed");
+  cancelBtn.classList.add("hidden");
+  restartBtn.classList.remove("hidden");
+}
+
 function cancelTimer() {
   clearInterval(timerId);
   timerId = null;
   showScreen(setupScreen);
 }
+
+// 화면이 사용자에게 안 보이게 되면(다른 탭·다른 앱·화면 꺼짐) 실패 처리.
+// timerId가 있을 때 = 타이머가 돌아가는 중일 때만 검사한다.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && timerId !== null) {
+    failTimer();
+  }
+});
 
 startBtn.addEventListener("click", startTimer);
 cancelBtn.addEventListener("click", cancelTimer);
