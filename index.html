@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>디지털 웰빙 타이머</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- 화면 1: 목표 시간 설정 화면 -->
+  <section id="setup-screen" class="screen">
+    <h1>📵 디지털 웰빙 타이머</h1>
+    <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
+
+    <div class="time-display">
+      <span id="minutes-value">10</span><span class="unit">분</span>
+    </div>
+
+    <input
+      type="range"
+      id="minutes-slider"
+      min="1"
+      max="120"
+      step="1"
+      value="10"
+    />
+
+    <div class="quick-buttons">
+      <button type="button" class="quick-btn" data-minutes="10">10분</button>
+      <button type="button" class="quick-btn" data-minutes="25">25분</button>
+      <button type="button" class="quick-btn" data-minutes="50">50분</button>
+    </div>
+
+    <button type="button" id="start-btn" class="primary-btn">시작하기</button>
+  </section>
+
+  <!-- 화면 2: 타이머 실행 화면 -->
+  <section id="timer-screen" class="screen hidden">
+    <p class="running-label" id="running-label">폰을 멀리하고 목표를 지켜보세요</p>
+
+    <div class="countdown" id="countdown">10:00</div>
+
+    <button type="button" id="cancel-btn" class="secondary-btn">포기하기</button>
+    <button type="button" id="restart-btn" class="primary-btn hidden">다시 하기</button>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
