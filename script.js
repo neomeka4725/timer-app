@@ -1,3 +1,11 @@
+const nicknameScreen = document.getElementById("nickname-screen");
+const nicknameInput = document.getElementById("nickname-input");
+const nicknameError = document.getElementById("nickname-error");
+const nicknameSaveBtn = document.getElementById("nickname-save-btn");
+const greetingName = document.getElementById("greeting-name");
+const statsName = document.getElementById("stats-name");
+const renameBtn = document.getElementById("rename-btn");
+
 const setupScreen = document.getElementById("setup-screen");
 const timerScreen = document.getElementById("timer-screen");
 const statsScreen = document.getElementById("stats-screen");
@@ -78,6 +86,7 @@ function releaseWakeLock() {
 // ---- 화면 전환 ----
 
 function showScreen(screen) {
+  nicknameScreen.classList.add("hidden");
   setupScreen.classList.add("hidden");
   timerScreen.classList.add("hidden");
   statsScreen.classList.add("hidden");
@@ -203,6 +212,7 @@ const RESULT_TEXTS = {
 };
 
 function renderStats() {
+  statsName.textContent = loadNickname();
   const records = loadRecords();
   const summary = summarize(records);
 
@@ -262,4 +272,43 @@ clearBtn.addEventListener("click", () => {
   }
 });
 
+renameBtn.addEventListener("click", () => askNickname());
+
+// ---- 닉네임 ----
+
+// 닉네임을 묻는 화면을 띄운다. 이미 있으면 입력칸에 미리 채워 둔다.
+function askNickname() {
+  nicknameInput.value = loadNickname();
+  nicknameError.classList.add("hidden");
+  showScreen(nicknameScreen);
+}
+
+function confirmNickname() {
+  const name = saveNickname(nicknameInput.value);
+  if (name === "") {
+    nicknameError.classList.remove("hidden");
+    return;
+  }
+  greetingName.textContent = name;
+  showScreen(setupScreen);
+}
+
+nicknameSaveBtn.addEventListener("click", confirmNickname);
+
+// 키보드에서 엔터를 눌러도 저장되게 한다.
+nicknameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") confirmNickname();
+});
+
+// ---- 앱 시작 ----
+
 updateMinutesDisplay();
+
+const savedNickname = loadNickname();
+if (savedNickname === "") {
+  // 처음 온 사람에게는 닉네임부터 묻는다.
+  askNickname();
+} else {
+  greetingName.textContent = savedNickname;
+  showScreen(setupScreen);
+}
