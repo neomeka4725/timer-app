@@ -126,3 +126,13 @@ h1 {
 .countdown.failed {
   color: #e5484d;
 }
+
+/* 화면 꺼짐 방지를 지원하지 않는 기기에만 보이는 경고 */
+.notice.warning {
+  color: #b45309;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: -8px;
+}
