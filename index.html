@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=10 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=11 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=10" />
+  <link rel="manifest" href="manifest.json?v=11" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
 
@@ -26,12 +26,23 @@
       placeholder="닉네임 (8자까지)"
       autocomplete="off"
     />
+    <input
+      type="text"
+      id="pin-input"
+      class="text-input"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      maxlength="4"
+      placeholder="비밀번호 4자리 숫자"
+      autocomplete="off"
+    />
     <p class="notice warning hidden" id="nickname-error">닉네임을 입력해 주세요.</p>
 
     <button type="button" id="nickname-save-btn" class="primary-btn">시작하기</button>
     <p class="notice">
-      회원가입 없이 닉네임만 쓰면 돼요.<br />
-      나중에 친구들과 기록을 나눌 때 이 이름으로 보입니다.
+      회원가입은 없어요. 닉네임과 숫자 4자리만 정하면 됩니다.<br />
+      다른 기기에서도 <b>같은 닉네임 + 같은 숫자</b>를 넣으면 내 기록이 따라와요.<br />
+      친구가 내 닉네임을 함부로 못 쓰게 막아주는 역할도 합니다.
     </p>
   </section>
 
@@ -190,8 +201,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=10"></script>
-  <script src="cloud.js?v=10"></script>
-  <script src="script.js?v=10"></script>
+  <script src="storage.js?v=11"></script>
+  <script src="cloud.js?v=11"></script>
+  <script src="script.js?v=11"></script>
 </body>
 </html>

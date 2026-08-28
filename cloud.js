@@ -11,6 +11,12 @@ const FIRESTORE_BASE =
   FIREBASE_PROJECT +
   "/databases/(default)/documents";
 
+// 예전 기록을 모두 버리고 새로 시작하기 위해 보관함 이름을 바꿨다.
+// 옛 records / posts 는 보안 규칙에서 빠졌기 때문에 이제 아무도 읽거나
+// 쓸 수 없다. (Firebase 콘솔에서 주인이 직접 지울 수는 있다)
+const COL_RECORDS = "records_v2";
+const COL_POSTS = "posts_v2";
+
 // 통신이 오래 걸리면 앱이 멈춘 것처럼 보이므로 시간 제한을 둔다.
 const TIMEOUT_MS = 8000;
 
@@ -47,7 +53,7 @@ function fromFields(fields) {
 // 기록 하나를 올린다. 실패하면 예외를 던진다.
 async function cloudSaveRecord(record) {
   const res = await fetchWithTimeout(
-    FIRESTORE_BASE + "/records?key=" + FIREBASE_KEY,
+    FIRESTORE_BASE + "/" + COL_RECORDS + "?key=" + FIREBASE_KEY,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -101,7 +107,7 @@ async function postDoc(path, fields) {
 // ---- 게시판 ----
 
 async function cloudSavePost(post) {
-  await postDoc("/posts", {
+  await postDoc("/" + COL_POSTS, {
     nickname: { stringValue: post.nickname },
     goalMinutes: { integerValue: String(Math.round(post.goalMinutes)) },
     elapsedSeconds: { integerValue: String(Math.round(post.elapsedSeconds)) },
@@ -114,7 +120,7 @@ async function cloudSavePost(post) {
 async function cloudLoadPosts(count) {
   const docs = await runQuery({
     structuredQuery: {
-      from: [{ collectionId: "posts" }],
+      from: [{ collectionId: COL_POSTS }],
       orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }],
       limit: count,
     },
@@ -135,7 +141,7 @@ async function cloudLoadPosts(count) {
 async function cloudLoadMyPosts(nickname, count) {
   const docs = await runQuery({
     structuredQuery: {
-      from: [{ collectionId: "posts" }],
+      from: [{ collectionId: COL_POSTS }],
       where: {
         fieldFilter: {
           field: { fieldPath: "nickname" },
@@ -158,7 +164,7 @@ async function cloudLoadMyPosts(nickname, count) {
 // ---- 응원 ----
 
 async function cloudSaveCheer(postId, cheer) {
-  await postDoc("/posts/" + postId + "/cheers", {
+  await postDoc("/" + COL_POSTS + "/" + postId + "/cheers", {
     nickname: { stringValue: cheer.nickname },
     emoji: { stringValue: cheer.emoji },
     message: { stringValue: cheer.message },
@@ -169,7 +175,7 @@ async function cloudSaveCheer(postId, cheer) {
 
 async function cloudLoadCheers(postId) {
   const res = await fetchWithTimeout(
-    FIRESTORE_BASE + "/posts/" + postId + "/cheers?pageSize=50&key=" + FIREBASE_KEY
+    FIRESTORE_BASE + "/" + COL_POSTS + "/" + postId + "/cheers?pageSize=50&key=" + FIREBASE_KEY
   );
   if (!res.ok) {
     throw new Error("응원 불러오기 실패 (" + res.status + ")");
@@ -191,7 +197,7 @@ async function cloudLoadCheers(postId) {
 async function cloudLoadRanking() {
   const docs = await runQuery({
     structuredQuery: {
-      from: [{ collectionId: "records" }],
+      from: [{ collectionId: COL_RECORDS }],
       limit: 2000,
     },
   });
@@ -225,7 +231,7 @@ async function cloudLoadRecords(nickname) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         structuredQuery: {
-          from: [{ collectionId: "records" }],
+          from: [{ collectionId: COL_RECORDS }],
           where: {
             fieldFilter: {
               field: { fieldPath: "nickname" },
@@ -248,4 +254,55 @@ async function cloudLoadRecords(nickname) {
     .filter((row) => row.document)
     .map((row) => fromFields(row.document.fields))
     .sort((a, b) => a.at - b.at);
+}
+
+
+// ---- 닉네임 주인 확인 (PIN) ----
+// 로그인이 없으므로 닉네임마다 4자리 PIN을 정해두고, 같은 닉네임을 쓰려면
+// 그 PIN을 맞혀야 하도록 한다.
+//
+// PIN을 그대로 저장하면 데이터베이스를 열어본 사람에게 그대로 보인다.
+// 그래서 알아볼 수 없는 형태(해시)로 바꿔서 저장한다.
+// 다만 4자리는 경우의 수가 적어서, 마음먹고 뚫으려는 사람은 막지 못한다.
+// 친구가 남의 닉네임을 무심코 쓰는 것을 막는 용도다.
+async function hashPin(nickname, pin) {
+  const data = new TextEncoder().encode(nickname + ":" + pin);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(buf)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// 그 닉네임이 이미 있는지 본다. 없으면 null을 준다.
+async function cloudGetUser(nickname) {
+  const res = await fetchWithTimeout(
+    FIRESTORE_BASE + "/users/" + encodeURIComponent(nickname) + "?key=" + FIREBASE_KEY
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("닉네임 확인 실패 (" + res.status + ")");
+  const data = await res.json();
+  return { pinHash: data.fields.pinHash.stringValue };
+}
+
+// 새 닉네임을 등록한다. 이미 있으면 실패한다.
+async function cloudCreateUser(nickname, pinHash) {
+  const res = await fetchWithTimeout(
+    FIRESTORE_BASE +
+      "/users?documentId=" +
+      encodeURIComponent(nickname) +
+      "&key=" +
+      FIREBASE_KEY,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          pinHash: { stringValue: pinHash },
+          at: { timestampValue: new Date().toISOString() },
+        },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error("닉네임 등록 실패 (" + res.status + ")");
+  return true;
 }

@@ -1,5 +1,6 @@
 const nicknameScreen = document.getElementById("nickname-screen");
 const nicknameInput = document.getElementById("nickname-input");
+const pinInput = document.getElementById("pin-input");
 const nicknameError = document.getElementById("nickname-error");
 const nicknameSaveBtn = document.getElementById("nickname-save-btn");
 const greetingName = document.getElementById("greeting-name");
@@ -804,25 +805,83 @@ document
 // 닉네임을 묻는 화면을 띄운다. 이미 있으면 입력칸에 미리 채워 둔다.
 function askNickname() {
   nicknameInput.value = loadNickname();
+  pinInput.value = "";
   nicknameError.classList.add("hidden");
+  nicknameSaveBtn.disabled = false;
+  nicknameSaveBtn.textContent = "시작하기";
   showScreen(nicknameScreen);
 }
 
-function confirmNickname() {
-  const name = saveNickname(nicknameInput.value);
+function showNicknameError(message) {
+  nicknameError.textContent = message;
+  nicknameError.classList.remove("hidden");
+}
+
+async function confirmNickname() {
+  const name = nicknameInput.value.trim().slice(0, 8);
+  const pin = pinInput.value.trim();
+
   if (name === "") {
-    nicknameError.classList.remove("hidden");
+    showNicknameError("닉네임을 입력해 주세요.");
     return;
   }
-  greetingName.textContent = name;
-  showScreen(setupScreen);
+  // 닉네임이 문서 주소로 쓰이기 때문에 빗금은 넣을 수 없다.
+  if (name.includes("/")) {
+    showNicknameError("닉네임에 / 는 쓸 수 없어요.");
+    return;
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    showNicknameError("비밀번호는 숫자 4자리로 정해 주세요.");
+    return;
+  }
+
+  nicknameSaveBtn.disabled = true;
+  nicknameSaveBtn.textContent = "확인하는 중…";
+  nicknameError.classList.add("hidden");
+
+  try {
+    const hash = await hashPin(name, pin);
+    const existing = await cloudGetUser(name);
+
+    if (existing === null) {
+      // 처음 쓰는 닉네임이면 이 사람 것으로 등록한다.
+      await cloudCreateUser(name, hash);
+    } else if (existing.pinHash !== hash) {
+      showNicknameError(
+        "이미 쓰고 있는 닉네임이에요. 비밀번호가 맞지 않습니다.\n" +
+          "본인이면 정했던 숫자 4자리를 넣고, 아니면 다른 닉네임을 써주세요."
+      );
+      nicknameSaveBtn.disabled = false;
+      nicknameSaveBtn.textContent = "시작하기";
+      return;
+    }
+
+    saveNickname(name);
+    savePinHash(hash);
+    greetingName.textContent = name;
+    showScreen(setupScreen);
+    checkBoardUpdates();
+  } catch (err) {
+    showNicknameError(
+      "인터넷에 연결되지 않아 확인할 수 없어요. 연결을 확인하고 다시 눌러주세요."
+    );
+    nicknameSaveBtn.disabled = false;
+    nicknameSaveBtn.textContent = "시작하기";
+  }
 }
 
 nicknameSaveBtn.addEventListener("click", confirmNickname);
 
 // 키보드에서 엔터를 눌러도 저장되게 한다.
-nicknameInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") confirmNickname();
+[nicknameInput, pinInput].forEach((el) => {
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") confirmNickname();
+  });
+});
+
+// 비밀번호 칸에는 숫자만 들어가게 한다.
+pinInput.addEventListener("input", () => {
+  pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4);
 });
 
 // ---- 앱 시작 ----
