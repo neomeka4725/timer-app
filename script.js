@@ -53,6 +53,7 @@ const rankSortButtons = document.querySelectorAll(".rank-sort");
 const soundToggle = document.getElementById("sound-toggle");
 const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
+const installTip = document.getElementById("install-tip");
 const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
@@ -172,6 +173,21 @@ soundToggle.addEventListener("click", () => {
     playChime();
   }
 });
+
+// ---- 홈 화면에 추가 안내 ----
+// 이미 홈 화면에서 열고 있으면 안내가 필요 없으므로 숨긴 채로 둔다.
+// standalone = 주소창 없이 앱처럼 열린 상태.
+// navigator.standalone 은 아이폰·아이패드 전용 표시다.
+function isInstalled() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
+if (!isInstalled()) {
+  installTip.classList.remove("hidden");
+}
 
 // ---- 화면 전환 ----
 

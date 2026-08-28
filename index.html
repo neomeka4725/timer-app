@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=12 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=13 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=12" />
+  <link rel="manifest" href="manifest.json?v=13" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
 
@@ -76,6 +76,25 @@
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
     </p>
+
+    <!-- 이미 홈 화면에서 열고 있는 사람에게는 숨긴다 -->
+    <details class="tip hidden" id="install-tip">
+      <summary>📱 앱처럼 쓰는 법 (홈 화면에 추가)</summary>
+      <p>
+        홈 화면에 추가하면 주소창 없이 전체화면으로 열리고, 아이콘도 생겨요.
+        진짜 앱처럼 쓸 수 있습니다.
+      </p>
+      <ol>
+        <li><b>아이폰·아이패드</b>: 사파리 아래(또는 위)의 공유 버튼
+          <b>⬆️</b> → <b>홈 화면에 추가</b> → 추가</li>
+        <li><b>갤럭시</b>: 크롬 오른쪽 위 <b>⋮</b> → <b>홈 화면에 추가</b></li>
+      </ol>
+      <p>
+        아이폰은 홈 화면 앱과 사파리가 따로 저장돼서, 처음 열 때 닉네임과
+        숫자를 다시 넣어야 해요. <b>같은 닉네임 + 같은 숫자</b>를 넣으면
+        기록은 그대로 따라옵니다.
+      </p>
+    </details>
 
     <details class="tip">
       <summary>🔕 알림 때문에 실패하지 않으려면</summary>
@@ -201,8 +220,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=12"></script>
-  <script src="cloud.js?v=12"></script>
-  <script src="script.js?v=12"></script>
+  <script src="storage.js?v=13"></script>
+  <script src="cloud.js?v=13"></script>
+  <script src="script.js?v=13"></script>
 </body>
 </html>
