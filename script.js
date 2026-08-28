@@ -265,7 +265,7 @@ function startBreak() {
   breakEndTime = Date.now() + BREAK_SECONDS * 1000;
 
   timerScreen.classList.add("resting");
-  countdownEl.classList.remove("failed");
+  countdownEl.classList.remove("failed", "voided");
   countdownEl.textContent = formatTime(BREAK_SECONDS);
   runningLabel.textContent = "☕ 쉬는 시간이에요. 폰 봐도 괜찮아요";
   forgiveNote.classList.add("hidden");
@@ -408,7 +408,7 @@ function startTimer() {
   endTime = Date.now() + goalSeconds * 1000;
 
   countdownEl.textContent = formatTime(remainingSeconds);
-  countdownEl.classList.remove("failed");
+  countdownEl.classList.remove("failed", "voided");
   runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
@@ -498,6 +498,27 @@ function failTimer() {
   countdownEl.classList.add("failed");
 }
 
+// 오래 자리를 비웠을 때. 기록을 남기지 않고 그냥 없던 일로 한다.
+function voidTimer() {
+  phase = "idle";
+  clearInterval(timerId);
+  timerId = null;
+  releaseWakeLock();
+
+  timerScreen.classList.remove("resting");
+  countdownEl.classList.remove("failed");
+  countdownEl.classList.add("voided");
+  runningLabel.textContent = "🕘 오래 자리를 비워서 이 판은 없던 일로 했어요";
+  forgiveNote.classList.add("hidden");
+  roundBadge.classList.add("hidden");
+
+  cancelBtn.classList.add("hidden");
+  shareBox.classList.add("hidden");
+  nextFocusBtn.classList.add("hidden");
+  stopPomoBtn.classList.add("hidden");
+  restartBtn.classList.remove("hidden");
+}
+
 function giveUpTimer() {
   phase = "idle";
   timerScreen.classList.remove("resting");
@@ -512,6 +533,11 @@ function giveUpTimer() {
 
 const FORGIVE_SECONDS = 5;
 const FORGIVE_LIMIT = 3;
+
+// 이만큼 넘게 자리를 비우면 실패가 아니라 "없던 일"로 한다.
+// 밥 먹으러 가거나 수업이 시작돼서 앱을 떠난 경우인데, 한참 뒤에 돌아와서
+// "실패했어요"를 보는 건 이상하다. 그 판은 흐지부지된 것이지 실패가 아니다.
+const CANCEL_SECONDS = 5 * 60;
 
 let leftAt = 0; // 화면을 벗어난 시각
 let forgiveCount = 0; // 이번 판에서 봐준 횟수
@@ -546,6 +572,12 @@ document.addEventListener("visibilitychange", () => {
     showForgiveNote();
     // 나가 있는 동안 시간이 다 됐다면 이제 성공 처리한다.
     if (remainingSeconds <= 0) finishTimer();
+    return;
+  }
+
+  // 아주 오래 비웠으면 실패가 아니라 없던 일로 한다.
+  if (awaySeconds > CANCEL_SECONDS) {
+    voidTimer();
     return;
   }
 
