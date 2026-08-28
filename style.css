@@ -20,8 +20,12 @@ body {
   text-align: center;
 }
 
+/* 화면과 요소를 숨길 때 쓰는 공용 클래스.
+   !important 를 붙인 이유: 이 파일 아래쪽에서 .dot 처럼 display 를 정하는
+   규칙이 나오면, 세기가 같아서 나중에 나온 쪽이 이겨버린다. 그러면 hidden 을
+   붙여도 안 숨겨진다. 실제로 게시판 빨간 점이 이것 때문에 늘 켜져 있었다. */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 h1 {
