@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=13 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=14 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=13" />
+  <link rel="manifest" href="manifest.json?v=14" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=13" />
+  <link rel="stylesheet" href="style.css?v=14" />
 </head>
 <body>
 
@@ -36,14 +36,36 @@
       placeholder="비밀번호 4자리 숫자"
       autocomplete="off"
     />
+    <p class="alert">
+      ⚠️ <b>숫자 4자리는 나중에 바꿀 수 없어요.</b><br />
+      잊어버리면 그 닉네임을 다시 쓸 수 없으니 꼭 기억해 주세요.
+    </p>
+
     <p class="notice warning hidden" id="nickname-error">닉네임을 입력해 주세요.</p>
 
     <button type="button" id="nickname-save-btn" class="primary-btn">시작하기</button>
+
     <p class="notice">
       회원가입은 없어요. 닉네임과 숫자 4자리만 정하면 됩니다.<br />
       다른 기기에서도 <b>같은 닉네임 + 같은 숫자</b>를 넣으면 내 기록이 따라와요.<br />
       친구가 내 닉네임을 함부로 못 쓰게 막아주는 역할도 합니다.
     </p>
+
+    <details class="tip">
+      <summary>❓ 숫자를 잊어버렸어요 / 왜 못 바꾸나요</summary>
+      <p>
+        <b>잊어버렸다면</b> 다른 닉네임으로 새로 시작하면 돼요. 예전 닉네임의
+        기록은 순위표에 그대로 남지만, 새 닉네임으로 계속 쓸 수 있습니다.
+        정말 그 닉네임을 되찾아야 하면 이 앱을 만든 친구에게 부탁하세요.
+        만든 사람은 그 닉네임 등록을 지워서 다시 정할 수 있게 해줄 수 있어요.
+      </p>
+      <p>
+        <b>왜 못 바꾸나요?</b> 이 앱은 로그인이 없어요. 그래서 "지금 바꾸려는
+        사람이 진짜 주인인지" 확인할 방법이 없습니다. 바꾸는 기능을 넣으면
+        아무나 남의 숫자를 바꿔서 닉네임을 빼앗을 수 있게 돼요. 그래서
+        일부러 막아뒀습니다.
+      </p>
+    </details>
   </section>
 
   <!-- 화면 1: 목표 시간 설정 화면 -->
@@ -220,8 +242,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=13"></script>
-  <script src="cloud.js?v=13"></script>
-  <script src="script.js?v=13"></script>
+  <script src="storage.js?v=14"></script>
+  <script src="cloud.js?v=14"></script>
+  <script src="script.js?v=14"></script>
 </body>
 </html>
