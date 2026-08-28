@@ -31,11 +31,13 @@ ChatGPT는 이 저장소를 볼 수 없다. 대화를 시작할 때 아래 회�
 
 ■ 파일 구성
 
-- index.html : 화면 6개의 구조. 모든 화면이 이 파일 안에 있다.
-- style.css  : 디자인
-- script.js  : 화면 전환, 타이머, 각 화면 그리기
-- storage.js : 이 기기 안에 저장 (localStorage)
-- cloud.js   : Firebase와 통신
+- index.html    : 화면 6개의 구조. 모든 화면이 이 파일 안에 있다.
+- style.css     : 디자인
+- script.js     : 화면 전환, 타이머, 소리, 각 화면 그리기
+- storage.js    : 이 기기 안에 저장 (localStorage)
+- cloud.js      : Firebase와 통신
+- manifest.json : 홈 화면에 추가했을 때 앱처럼 보이게 하는 설정
+- icon-192.png, icon-512.png : 앱 아이콘
 
 화면 6개는 전부 index.html 안에 있고, hidden 클래스를 붙였다 뗐다 하며
 하나씩 보여준다. script.js의 showScreen(화면)이 그 일을 한다.
@@ -57,6 +59,11 @@ ChatGPT는 이 저장소를 볼 수 없다. 대화를 시작할 때 아래 회�
 5. 공유 게시판 (성공했을 때만 올릴 수 있음, 이모지 5종 + 30자 응원)
 6. 순위표 (성공 횟수 / 누적 시간 두 기준으로 전환, 내 순위 강조)
 7. 인터넷이 끊겨도 타이머와 기록 저장은 되고, 연결되면 밀린 기록을 올린다
+8. 타이머가 끝나면 소리로 알린다 (Web Audio로 직접 음을 만든다.
+   소리 파일은 없다. 수업 중을 위해 끄는 스위치가 있다)
+9. 짧은 이탈 봐주기 — 5초 안에 돌아오면 최대 3번까지 실패로 치지 않는다
+10. 홈 화면에 추가하면 앱처럼 보인다 (manifest.json)
+11. 게시판에 새 글이나 내 글에 달린 응원이 있으면 버튼에 빨간 점을 띄운다
 
 
 ■ Firestore 데이터 구조 (프로젝트 ID: timer-app-6965c, 무료 Spark 요금제)
@@ -82,6 +89,7 @@ cloud.js
   cloudLoadRecords(nickname)   그 닉네임의 기록 전부 가져오기 (최대 500개)
   cloudSavePost(post)          게시판에 글 올리기
   cloudLoadPosts(개수)          최근 글 가져오기 (지금은 20개)
+  cloudLoadMyPosts(nickname, 개수)  내가 쓴 글만 가져오기
   cloudSaveCheer(postId, cheer) 응원 올리기
   cloudLoadCheers(postId)      그 글의 응원 가져오기
   cloudLoadRanking()           records 전부 읽어 닉네임별로 합치기 (최대 2000개)
@@ -92,6 +100,8 @@ cloud.js
 storage.js
   loadNickname() / saveNickname(이름)
   loadRecords() / saveRecord(기록) / clearRecords()
+  loadSoundOn() / saveSoundOn(참거짓)     소리 켜짐 여부
+  loadBoardSeen() / saveBoardSeen(밀리초)  게시판을 마지막으로 본 시각
   summarize(기록목록)  → {successCount, failCount, totalSeconds, successRate}
 
 script.js
@@ -99,6 +109,12 @@ script.js
   formatDuration(초)          "1시간 25분" 같은 문자로 바꿈
   formatDate(밀리초)           "8월 28일 오후 3:20" 같은 문자로 바꿈
   renderStats() / renderBoard() / renderRank()   각 화면 그리기
+  playChime()                 끝났을 때 소리 울리기
+  checkBoardUpdates()         게시판 빨간 점 확인
+
+타이머 화면에서 주의할 점:
+  화면을 벗어나 있는 동안에는 성공으로 끝내지 않는다(script.js의 setInterval 안).
+  이 처리를 지우면 나갔다 오기만 해도 성공하는 꼼수가 생긴다.
 
 
 ■ 반드시 지킬 것
