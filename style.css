@@ -464,3 +464,47 @@ h1 {
   color: #9aa2b4;
   font-weight: 400;
 }
+
+/* ---- 소리 켜기/끄기 ---- */
+
+.sound-toggle {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border: 1px solid #d7ddee;
+  border-radius: 12px;
+  background: #fff;
+  color: #4c6fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.sound-toggle.off {
+  color: #9aa2b4;
+  background: #f6f7fa;
+}
+
+/* ---- 잠깐 나갔다 온 것을 봐줬을 때 ---- */
+
+.forgive-note {
+  margin: -4px 0 20px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #b45309;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* ---- 게시판에 새 소식이 있을 때 빨간 점 ---- */
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 2px;
+  vertical-align: top;
+  border-radius: 50%;
+  background: #e5484d;
+}

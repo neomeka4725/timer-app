@@ -129,6 +129,32 @@ async function cloudLoadPosts(count) {
   }));
 }
 
+// 내가 쓴 글만 가져온다. (응원이 새로 달렸는지 확인할 때 쓴다)
+// 주의: 여기에 정렬(orderBy)을 붙이면 Firebase가 추가 설정을 요구하므로
+// 가져온 뒤 자바스크립트에서 정렬한다.
+async function cloudLoadMyPosts(nickname, count) {
+  const docs = await runQuery({
+    structuredQuery: {
+      from: [{ collectionId: "posts" }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: "nickname" },
+          op: "EQUAL",
+          value: { stringValue: nickname },
+        },
+      },
+      limit: 30,
+    },
+  });
+  return docs
+    .map((d) => ({
+      id: docId(d.name),
+      at: new Date(d.fields.at.timestampValue).getTime(),
+    }))
+    .sort((a, b) => b.at - a.at)
+    .slice(0, count);
+}
+
 // ---- 응원 ----
 
 async function cloudSaveCheer(postId, cheer) {

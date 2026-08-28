@@ -48,6 +48,10 @@ const rankBtn = document.getElementById("rank-btn");
 const rankStatus = document.getElementById("rank-status");
 const rankList = document.getElementById("rank-list");
 const rankSortButtons = document.querySelectorAll(".rank-sort");
+
+const soundToggle = document.getElementById("sound-toggle");
+const forgiveNote = document.getElementById("forgive-note");
+const boardDot = document.getElementById("board-dot");
 const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
@@ -101,6 +105,72 @@ function releaseWakeLock() {
     wakeLock = null;
   }
 }
+
+// ---- 끝났을 때 소리 알리기 ----
+// 소리 파일을 받지 않고 브라우저가 직접 음을 만들게 한다.
+// iOS는 사용자가 버튼을 누른 적이 없으면 소리를 막기 때문에,
+// "시작하기"를 누를 때 소리 장치를 미리 깨워 둔다.
+
+let audioCtx = null;
+let soundOn = loadSoundOn();
+
+function updateSoundToggle() {
+  soundToggle.textContent = soundOn
+    ? "🔔 끝나면 소리로 알려줘요"
+    : "🔕 소리 꺼짐 (수업 중일 때)";
+  soundToggle.classList.toggle("off", !soundOn);
+}
+
+function wakeUpAudio() {
+  if (!soundOn) return;
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = new Ctx();
+    }
+    // 잠들어 있으면 깨운다. 버튼을 누른 지금이 아니면 못 깨운다.
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (err) {
+    audioCtx = null;
+  }
+}
+
+// 도-미-솔 세 음을 차례로 울린다.
+function playChime() {
+  if (!soundOn || !audioCtx) return;
+  try {
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((hz, i) => {
+      const start = audioCtx.currentTime + i * 0.18;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = hz;
+      // 소리가 뚝 끊기면 "딱" 하는 잡음이 나므로 부드럽게 줄인다.
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.55);
+    });
+  } catch (err) {
+    // 소리가 안 나도 타이머는 그대로 동작해야 한다.
+  }
+}
+
+soundToggle.addEventListener("click", () => {
+  soundOn = !soundOn;
+  saveSoundOn(soundOn);
+  updateSoundToggle();
+  if (soundOn) {
+    // 켜자마자 어떤 소리인지 들려준다.
+    wakeUpAudio();
+    playChime();
+  }
+});
 
 // ---- 화면 전환 ----
 
@@ -161,14 +231,24 @@ function startTimer() {
   restartBtn.classList.add("hidden");
   shareBox.classList.add("hidden");
 
+  // 이번 판의 봐주기 횟수를 초기화한다.
+  forgiveCount = 0;
+  leftAt = 0;
+  forgiveNote.classList.add("hidden");
+
   showScreen(timerScreen);
   requestWakeLock();
+  // 버튼을 누른 지금이 소리 장치를 깨울 수 있는 유일한 순간이다.
+  wakeUpAudio();
 
   timerId = setInterval(() => {
     remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
     countdownEl.textContent = formatTime(remainingSeconds);
 
-    if (remainingSeconds <= 0) {
+    // 화면을 벗어나 있는 동안에는 성공으로 끝내지 않는다.
+    // 안 그러면 나갔다 오기만 해도 성공이 되어버린다.
+    // 돌아왔을 때 봐줄지 실패로 볼지 판단한 뒤에 끝낸다.
+    if (remainingSeconds <= 0 && !document.hidden) {
       finishTimer();
     }
   }, 250);
@@ -208,6 +288,7 @@ function stopTimer(result) {
 
 function finishTimer() {
   stopTimer("success");
+  playChime();
   runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
   // 성공했을 때만 게시판에 자랑할 수 있게 한다.
   shareMessage.value = "";
@@ -228,12 +309,49 @@ function giveUpTimer() {
   countdownEl.classList.add("failed");
 }
 
-// 화면이 사용자에게 안 보이게 되면(다른 탭·다른 앱·화면 꺼짐) 실패 처리.
-// timerId가 있을 때 = 타이머가 돌아가는 중일 때만 검사한다.
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden && timerId !== null) {
-    failTimer();
+// ---- 화면을 벗어났을 때 ----
+// 전화가 오거나 알림을 잘못 눌러도 바로 실패하면 너무 억울하다.
+// 그래서 잠깐(5초) 안에 돌아오면 봐준다. 다만 횟수를 제한하고 화면에 알린다.
+
+const FORGIVE_SECONDS = 5;
+const FORGIVE_LIMIT = 3;
+
+let leftAt = 0; // 화면을 벗어난 시각
+let forgiveCount = 0; // 이번 판에서 봐준 횟수
+
+function showForgiveNote() {
+  if (forgiveCount === 0) {
+    forgiveNote.classList.add("hidden");
+    return;
   }
+  const left = FORGIVE_LIMIT - forgiveCount;
+  forgiveNote.textContent =
+    `😮‍💨 잠깐 나갔다 온 걸 ${forgiveCount}번 봐줬어요. ` +
+    (left > 0 ? `${left}번 더 봐줄 수 있어요.` : "다음엔 실패로 처리돼요.");
+  forgiveNote.classList.remove("hidden");
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (timerId === null) return; // 타이머가 안 돌면 상관없다
+
+  if (document.hidden) {
+    // 아직 실패로 정하지 않는다. 얼마나 나가 있었는지는 돌아와야 알 수 있다.
+    leftAt = Date.now();
+    return;
+  }
+
+  // 돌아왔다. 나가 있던 시간으로 판단한다.
+  const awaySeconds = (Date.now() - leftAt) / 1000;
+
+  if (awaySeconds <= FORGIVE_SECONDS && forgiveCount < FORGIVE_LIMIT) {
+    forgiveCount += 1;
+    showForgiveNote();
+    // 나가 있는 동안 시간이 다 됐다면 이제 성공 처리한다.
+    if (remainingSeconds <= 0) finishTimer();
+    return;
+  }
+
+  failTimer();
 });
 
 // ---- 내 기록 화면 ----
@@ -448,7 +566,42 @@ async function refreshCheers(postId) {
   }
 }
 
+// 마지막으로 게시판을 본 뒤에 새 글이나 내 글에 달린 응원이 있는지 본다.
+// 있으면 설정 화면의 게시판 버튼에 빨간 점을 띄운다.
+async function checkBoardUpdates() {
+  const me = loadNickname();
+  const seen = loadBoardSeen();
+  if (seen === 0) return; // 한 번도 안 봤으면 굳이 재촉하지 않는다
+
+  try {
+    // 1) 남이 쓴 새 글이 있나
+    const latest = await cloudLoadPosts(1);
+    let isNew =
+      latest.length > 0 && latest[0].at > seen && latest[0].nickname !== me;
+
+    // 2) 내가 쓴 최근 글에 새 응원이 달렸나
+    if (!isNew) {
+      const myPosts = await cloudLoadMyPosts(me, 3);
+      for (const post of myPosts) {
+        const cheers = await cloudLoadCheers(post.id);
+        if (cheers.some((c) => c.at > seen && c.nickname !== me)) {
+          isNew = true;
+          break;
+        }
+      }
+    }
+
+    boardDot.classList.toggle("hidden", !isNew);
+  } catch (err) {
+    // 인터넷이 안 되면 빨간 점은 그냥 안 띄운다.
+  }
+}
+
 async function renderBoard() {
+  // 지금 본 것으로 치고 빨간 점을 끈다.
+  saveBoardSeen(Date.now());
+  boardDot.classList.add("hidden");
+
   boardStatus.textContent = "불러오는 중…";
   boardStatus.classList.remove("offline");
   boardList.replaceChildren();
@@ -647,6 +800,7 @@ nicknameInput.addEventListener("keydown", (event) => {
 // ---- 앱 시작 ----
 
 updateMinutesDisplay();
+updateSoundToggle();
 
 const savedNickname = loadNickname();
 if (savedNickname === "") {
@@ -655,4 +809,5 @@ if (savedNickname === "") {
 } else {
   greetingName.textContent = savedNickname;
   showScreen(setupScreen);
+  checkBoardUpdates();
 }

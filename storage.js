@@ -30,6 +30,49 @@ function saveNickname(name) {
 // { at: 저장시각(밀리초), goalMinutes: 목표분, elapsedSeconds: 실제로 버틴 초,
 //   result: "success" | "left" | "gaveup" }
 
+// ---- 소리 켜기/끄기 ----
+// 수업 중에 소리가 나면 곤란하므로 끌 수 있어야 한다.
+
+const SOUND_KEY = "wellness-timer-sound";
+
+function loadSoundOn() {
+  try {
+    // 저장된 적이 없으면 소리를 켠 상태로 시작한다.
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch (err) {
+    return true;
+  }
+}
+
+function saveSoundOn(on) {
+  try {
+    localStorage.setItem(SOUND_KEY, on ? "on" : "off");
+  } catch (err) {
+    // 저장에 실패해도 이번 실행 동안은 그대로 쓴다.
+  }
+}
+
+// ---- 게시판을 마지막으로 본 시각 ----
+// 그 뒤에 올라온 글이나 응원이 있으면 빨간 점을 띄운다.
+
+const BOARD_SEEN_KEY = "wellness-timer-board-seen";
+
+function loadBoardSeen() {
+  try {
+    return Number(localStorage.getItem(BOARD_SEEN_KEY)) || 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function saveBoardSeen(ms) {
+  try {
+    localStorage.setItem(BOARD_SEEN_KEY, String(ms));
+  } catch (err) {
+    // 저장에 실패하면 빨간 점이 계속 보일 뿐이라 큰 문제는 없다.
+  }
+}
+
 function loadRecords() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
