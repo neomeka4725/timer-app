@@ -633,3 +633,34 @@ h1 {
     background: #bbf7d0;
   }
 }
+
+/* ---- 쉬었다 하기 (뽀모도로) ---- */
+
+/* 쉬는 시간에는 화면 전체를 초록색으로 바꾼다.
+   "지금 나가도 되는지"를 헷갈리면 억울한 실패가 생기므로,
+   집중 중과 색이 확실히 달라야 한다. */
+#timer-screen.resting {
+  background: #ecfdf5;
+  border: 2px solid #6ee7b7;
+  border-radius: 20px;
+}
+
+#timer-screen.resting .countdown {
+  color: #059669;
+}
+
+.round-badge {
+  display: inline-block;
+  margin: 0 auto 12px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+#timer-screen.resting .round-badge {
+  background: #d1fae5;
+  color: #047857;
+}

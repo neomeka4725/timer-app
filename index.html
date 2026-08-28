@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=16 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=18 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=16" />
+  <link rel="manifest" href="manifest.json?v=18" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=18" />
 </head>
 <body>
 
@@ -134,6 +134,14 @@
       </p>
     </details>
 
+    <button type="button" id="pomodoro-toggle" class="sound-toggle">
+      🍅 쉬었다 하기 꺼짐
+    </button>
+    <p class="notice" id="pomodoro-note">
+      켜면 목표 시간이 끝날 때마다 <b>5분 쉬는 시간</b>이 붙어요.
+      쉬는 동안에는 화면을 벗어나도 실패가 아니라서 화장실도 갈 수 있어요.
+    </p>
+
     <div class="sound-row">
       <button type="button" id="sound-toggle" class="sound-toggle">🔔 끝나면 소리로 알려줘요</button>
       <button type="button" id="sound-test" class="sound-test">🔊 미리 듣기</button>
@@ -154,6 +162,7 @@
 
   <!-- 화면 2: 타이머 실행 화면 -->
   <section id="timer-screen" class="screen hidden">
+    <p class="round-badge hidden" id="round-badge"></p>
     <p class="running-label" id="running-label">폰을 멀리하고 목표를 지켜보세요</p>
 
     <div class="countdown" id="countdown">10:00</div>
@@ -174,6 +183,9 @@
       <button type="button" id="share-btn" class="primary-btn">💬 게시판에 올리기</button>
       <p class="notice" id="share-status"></p>
     </div>
+
+    <button type="button" id="next-focus-btn" class="primary-btn hidden">바로 집중 시작</button>
+    <button type="button" id="stop-pomo-btn" class="secondary-btn hidden">오늘은 그만하기</button>
 
     <button type="button" id="restart-btn" class="primary-btn hidden">다시 하기</button>
   </section>
@@ -249,8 +261,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=16"></script>
-  <script src="cloud.js?v=16"></script>
-  <script src="script.js?v=16"></script>
+  <script src="storage.js?v=18"></script>
+  <script src="cloud.js?v=18"></script>
+  <script src="script.js?v=18"></script>
 </body>
 </html>
