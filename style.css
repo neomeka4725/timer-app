@@ -568,3 +568,18 @@ h1 {
   border-radius: 999px;
   padding: 1px 7px;
 }
+
+/* ---- 꼭 읽어야 하는 안내 (비밀번호를 못 바꾼다는 공지 등) ---- */
+
+.alert {
+  text-align: left;
+  margin: 4px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #fbbf24;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
