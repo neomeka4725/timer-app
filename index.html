@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=5 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=6 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
@@ -99,6 +99,8 @@
       </div>
     </div>
 
+    <p class="sync-status" id="sync-status"></p>
+
     <div class="total-time">
       누적 집중 시간 <b id="stat-total">0분</b>
     </div>
@@ -111,10 +113,11 @@
 
     <button type="button" id="stats-back-btn" class="primary-btn">돌아가기</button>
     <button type="button" id="rename-btn" class="text-btn">✏️ 닉네임 바꾸기</button>
-    <button type="button" id="clear-btn" class="secondary-btn">기록 전체 삭제</button>
+    <button type="button" id="clear-btn" class="secondary-btn">이 기기 기록 지우기</button>
   </section>
 
-  <script src="storage.js?v=5"></script>
-  <script src="script.js?v=5"></script>
+  <script src="storage.js?v=6"></script>
+  <script src="cloud.js?v=6"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

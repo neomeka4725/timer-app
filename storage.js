@@ -54,6 +54,24 @@ function saveRecord(record) {
   return records;
 }
 
+// 인터넷에 올리는 데 성공한 기록을 표시해둔다.
+// (at은 기록마다 다른 시각이라 구분표 역할을 한다)
+function markRecordSynced(at) {
+  const records = loadRecords();
+  const target = records.find((r) => r.at === at);
+  if (!target) return;
+  target.synced = true;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  } catch (err) {
+    // 표시에 실패해도 다음에 다시 올리려고 시도할 뿐이라 문제되지 않는다.
+  }
+}
+
+function unsyncedRecords() {
+  return loadRecords().filter((r) => !r.synced);
+}
+
 function clearRecords() {
   try {
     localStorage.removeItem(STORAGE_KEY);
