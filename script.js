@@ -30,6 +30,7 @@ const recordList = document.getElementById("record-list");
 const recordEmpty = document.getElementById("record-empty");
 const statsBackBtn = document.getElementById("stats-back-btn");
 const statsBackTop = document.getElementById("stats-back-top");
+const syncStatus = document.getElementById("sync-status");
 const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
@@ -161,12 +162,23 @@ function stopTimer(result) {
   const elapsedSeconds =
     result === "success" ? goalSeconds : goalSeconds - remainingSeconds;
 
-  saveRecord({
+  const record = {
     at: Date.now(),
+    nickname: loadNickname(),
     goalMinutes: goalSeconds / 60,
     elapsedSeconds: elapsedSeconds,
     result: result,
-  });
+    synced: false,
+  };
+
+  // 먼저 이 기기에 저장한다. 인터넷이 끊겨도 기록은 남아야 하니까.
+  saveRecord(record);
+
+  // 그다음 조용히 인터넷에 올린다. 실패해도 앱은 그대로 쓸 수 있고,
+  // 다음에 기록 화면을 열 때 다시 올린다.
+  cloudSaveRecord(record)
+    .then(() => markRecordSynced(record.at))
+    .catch(() => {});
 
   cancelBtn.classList.add("hidden");
   restartBtn.classList.remove("hidden");
@@ -211,9 +223,50 @@ const RESULT_TEXTS = {
   gaveup: "포기",
 };
 
-function renderStats() {
-  statsName.textContent = loadNickname();
-  const records = loadRecords();
+// 아직 못 올린 기록들을 다시 올려본다.
+async function pushUnsynced(nickname) {
+  for (const record of unsyncedRecords()) {
+    // 닉네임을 바꿨다면 지금 이름으로 올린다.
+    await cloudSaveRecord({ ...record, nickname: nickname });
+    markRecordSynced(record.at);
+  }
+}
+
+// 보여줄 기록을 정한다. 인터넷이 되면 인터넷 기록(모든 기기의 기록)을,
+// 안 되면 이 기기에 있는 기록만 쓴다.
+async function collectRecords(nickname) {
+  try {
+    await pushUnsynced(nickname);
+    const cloud = await cloudLoadRecords(nickname);
+    // 방금 올리지 못한 게 남아 있으면 화면에서는 함께 보여준다.
+    const stillLocal = unsyncedRecords();
+    return {
+      records: [...cloud, ...stillLocal].sort((a, b) => a.at - b.at),
+      online: true,
+    };
+  } catch (err) {
+    return { records: loadRecords(), online: false };
+  }
+}
+
+async function renderStats() {
+  const nickname = loadNickname();
+  statsName.textContent = nickname;
+
+  syncStatus.textContent = "☁️ 기록을 불러오는 중…";
+  syncStatus.classList.remove("offline");
+
+  const result = await collectRecords(nickname);
+  const records = result.records;
+
+  if (result.online) {
+    syncStatus.textContent = "☁️ 모든 기기의 기록을 합쳐서 보여주고 있어요";
+  } else {
+    syncStatus.textContent =
+      "⚠️ 인터넷에 연결되지 않아 이 기기 기록만 보여요";
+    syncStatus.classList.add("offline");
+  }
+
   const summary = summarize(records);
 
   statSuccess.textContent = summary.successCount;
@@ -266,7 +319,10 @@ statsBackBtn.addEventListener("click", () => showScreen(setupScreen));
 statsBackTop.addEventListener("click", () => showScreen(setupScreen));
 
 clearBtn.addEventListener("click", () => {
-  if (confirm("기록을 전부 지울까요? 되돌릴 수 없어요.")) {
+  const message =
+    "이 기기에 저장된 기록을 지울까요?\n\n" +
+    "이미 인터넷에 올라간 기록은 남아 있어서, 인터넷이 연결되면 다시 보입니다.";
+  if (confirm(message)) {
     clearRecords();
     renderStats();
   }

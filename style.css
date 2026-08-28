@@ -221,6 +221,16 @@ h1 {
   color: #6b7280;
 }
 
+.sync-status {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #8a93a6;
+}
+
+.sync-status.offline {
+  color: #b45309;
+}
+
 .total-time {
   padding: 14px;
   border-radius: 14px;
