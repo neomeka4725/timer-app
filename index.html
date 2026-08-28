@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=6 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=7 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -64,7 +64,12 @@
     </p>
 
     <button type="button" id="start-btn" class="primary-btn">시작하기</button>
-    <button type="button" id="stats-btn" class="text-btn">📊 내 기록 보기</button>
+
+    <div class="nav-row">
+      <button type="button" id="stats-btn" class="text-btn">📊<br />내 기록</button>
+      <button type="button" id="board-btn" class="text-btn">💬<br />게시판</button>
+      <button type="button" id="rank-btn" class="text-btn">🏆<br />순위표</button>
+    </div>
   </section>
 
   <!-- 화면 2: 타이머 실행 화면 -->
@@ -74,6 +79,21 @@
     <div class="countdown" id="countdown">10:00</div>
 
     <button type="button" id="cancel-btn" class="secondary-btn">포기하기</button>
+
+    <!-- 성공했을 때만 나오는 게시판 올리기 -->
+    <div id="share-box" class="share-box hidden">
+      <input
+        type="text"
+        id="share-message"
+        class="text-input"
+        maxlength="100"
+        placeholder="한마디 남기기 (선택)"
+        autocomplete="off"
+      />
+      <button type="button" id="share-btn" class="primary-btn">💬 게시판에 올리기</button>
+      <p class="notice" id="share-status"></p>
+    </div>
+
     <button type="button" id="restart-btn" class="primary-btn hidden">다시 하기</button>
   </section>
 
@@ -116,8 +136,40 @@
     <button type="button" id="clear-btn" class="secondary-btn">이 기기 기록 지우기</button>
   </section>
 
-  <script src="storage.js?v=6"></script>
-  <script src="cloud.js?v=6"></script>
-  <script src="script.js?v=6"></script>
+  <!-- 화면 4: 우리 반 게시판 -->
+  <section id="board-screen" class="screen hidden">
+    <div class="screen-header">
+      <button type="button" id="board-back" class="back-btn" aria-label="돌아가기">←</button>
+      <h2 class="screen-title">💬 우리 반 게시판</h2>
+    </div>
+
+    <p class="sync-status" id="board-status">불러오는 중…</p>
+    <div id="board-list"></div>
+
+    <button type="button" id="board-refresh" class="text-btn">🔄 새로고침</button>
+    <button type="button" id="board-back-bottom" class="primary-btn">돌아가기</button>
+  </section>
+
+  <!-- 화면 5: 순위표 -->
+  <section id="rank-screen" class="screen hidden">
+    <div class="screen-header">
+      <button type="button" id="rank-back" class="back-btn" aria-label="돌아가기">←</button>
+      <h2 class="screen-title">🏆 우리 반 순위</h2>
+    </div>
+
+    <div class="quick-buttons">
+      <button type="button" class="quick-btn rank-sort active" data-sort="count">성공 횟수</button>
+      <button type="button" class="quick-btn rank-sort" data-sort="time">누적 시간</button>
+    </div>
+
+    <p class="sync-status" id="rank-status">불러오는 중…</p>
+    <ol class="rank-list" id="rank-list"></ol>
+
+    <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
+  </section>
+
+  <script src="storage.js?v=7"></script>
+  <script src="cloud.js?v=7"></script>
+  <script src="script.js?v=7"></script>
 </body>
 </html>

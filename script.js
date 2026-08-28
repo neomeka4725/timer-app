@@ -31,9 +31,27 @@ const recordEmpty = document.getElementById("record-empty");
 const statsBackBtn = document.getElementById("stats-back-btn");
 const statsBackTop = document.getElementById("stats-back-top");
 const syncStatus = document.getElementById("sync-status");
+
+const shareBox = document.getElementById("share-box");
+const shareMessage = document.getElementById("share-message");
+const shareBtn = document.getElementById("share-btn");
+const shareStatus = document.getElementById("share-status");
+
+const boardScreen = document.getElementById("board-screen");
+const boardBtn = document.getElementById("board-btn");
+const boardStatus = document.getElementById("board-status");
+const boardList = document.getElementById("board-list");
+const boardRefresh = document.getElementById("board-refresh");
+
+const rankScreen = document.getElementById("rank-screen");
+const rankBtn = document.getElementById("rank-btn");
+const rankStatus = document.getElementById("rank-status");
+const rankList = document.getElementById("rank-list");
+const rankSortButtons = document.querySelectorAll(".rank-sort");
 const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
+let lastRecord = null; // 방금 끝낸 판 (게시판에 올릴 때 쓴다)
 let goalSeconds = 0; // 이번 판의 목표 시간(초)
 let endTime = 0; // 끝나야 하는 시각
 let remainingSeconds = 0;
@@ -91,6 +109,8 @@ function showScreen(screen) {
   setupScreen.classList.add("hidden");
   timerScreen.classList.add("hidden");
   statsScreen.classList.add("hidden");
+  boardScreen.classList.add("hidden");
+  rankScreen.classList.add("hidden");
   screen.classList.remove("hidden");
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
   window.scrollTo(0, 0);
@@ -139,6 +159,7 @@ function startTimer() {
   runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
+  shareBox.classList.add("hidden");
 
   showScreen(timerScreen);
   requestWakeLock();
@@ -182,11 +203,17 @@ function stopTimer(result) {
 
   cancelBtn.classList.add("hidden");
   restartBtn.classList.remove("hidden");
+  lastRecord = record;
 }
 
 function finishTimer() {
   stopTimer("success");
   runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
+  // 성공했을 때만 게시판에 자랑할 수 있게 한다.
+  shareMessage.value = "";
+  shareStatus.textContent = "";
+  shareBtn.disabled = false;
+  shareBox.classList.remove("hidden");
 }
 
 function failTimer() {
@@ -304,6 +331,235 @@ async function renderStats() {
   });
 }
 
+// ---- 게시판 ----
+
+const CHEER_EMOJIS = ["👏", "🔥", "💪", "👍", "😍"];
+
+// 화면에 글자를 넣을 때는 textContent를 쓴다.
+// 친구가 쓴 글에 HTML 태그가 섞여 있어도 그대로 글자로만 보이게 하기 위해서다.
+function makeCheerList(cheers) {
+  const ul = document.createElement("ul");
+  ul.className = "cheer-list";
+  cheers.forEach((c) => {
+    const li = document.createElement("li");
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = c.nickname + " ";
+    li.appendChild(who);
+    li.appendChild(document.createTextNode(c.emoji + " " + c.message));
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+function makePostCard(post) {
+  const card = document.createElement("div");
+  card.className = "post";
+
+  const head = document.createElement("div");
+  head.className = "post-head";
+  const name = document.createElement("span");
+  name.className = "post-name";
+  name.textContent = post.nickname;
+  const badge = document.createElement("span");
+  badge.className = "post-badge";
+  badge.textContent = formatDuration(post.elapsedSeconds) + " 집중";
+  const when = document.createElement("span");
+  when.className = "post-when";
+  when.textContent = formatDate(post.at);
+  head.append(name, badge, when);
+  card.appendChild(head);
+
+  if (post.message) {
+    const msg = document.createElement("p");
+    msg.className = "post-message";
+    msg.textContent = post.message;
+    card.appendChild(msg);
+  }
+
+  // 이모지를 누르면 바로 응원이 올라간다.
+  const row = document.createElement("div");
+  row.className = "cheer-row";
+  CHEER_EMOJIS.forEach((emoji) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cheer-btn";
+    btn.textContent = emoji;
+    btn.addEventListener("click", () => sendCheer(post.id, emoji, "", btn));
+    row.appendChild(btn);
+  });
+  card.appendChild(row);
+
+  const cheersHolder = document.createElement("div");
+  cheersHolder.dataset.cheersFor = post.id;
+  card.appendChild(cheersHolder);
+
+  // 짧은 응원 한마디
+  const form = document.createElement("div");
+  form.className = "cheer-form";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.maxLength = 30;
+  input.placeholder = "응원 한마디 (30자)";
+  const send = document.createElement("button");
+  send.type = "button";
+  send.textContent = "보내기";
+  const submit = () => {
+    const text = input.value.trim();
+    if (text === "") return;
+    input.value = "";
+    sendCheer(post.id, "💬", text, send);
+  };
+  send.addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+  form.append(input, send);
+  card.appendChild(form);
+
+  return card;
+}
+
+async function sendCheer(postId, emoji, message, button) {
+  button.disabled = true;
+  try {
+    await cloudSaveCheer(postId, {
+      nickname: loadNickname(),
+      emoji: emoji,
+      message: message,
+      at: Date.now(),
+    });
+    await refreshCheers(postId);
+  } catch (err) {
+    boardStatus.textContent = "⚠️ 응원을 보내지 못했어요. 인터넷을 확인해 주세요.";
+    boardStatus.classList.add("offline");
+  }
+  button.disabled = false;
+}
+
+async function refreshCheers(postId) {
+  const holder = boardList.querySelector('[data-cheers-for="' + postId + '"]');
+  if (!holder) return;
+  try {
+    const cheers = await cloudLoadCheers(postId);
+    holder.replaceChildren(makeCheerList(cheers));
+  } catch (err) {
+    // 응원을 못 불러와도 글은 그대로 보이게 둔다.
+  }
+}
+
+async function renderBoard() {
+  boardStatus.textContent = "불러오는 중…";
+  boardStatus.classList.remove("offline");
+  boardList.replaceChildren();
+
+  let posts;
+  try {
+    posts = await cloudLoadPosts(20);
+  } catch (err) {
+    boardStatus.textContent = "⚠️ 인터넷에 연결되지 않아 게시판을 볼 수 없어요.";
+    boardStatus.classList.add("offline");
+    return;
+  }
+
+  if (posts.length === 0) {
+    boardStatus.textContent =
+      "아직 올라온 글이 없어요. 타이머를 성공하면 올릴 수 있습니다.";
+    return;
+  }
+
+  boardStatus.textContent = "최근 글 " + posts.length + "개";
+  posts.forEach((post) => boardList.appendChild(makePostCard(post)));
+  // 응원은 글을 먼저 보여준 뒤 채워 넣는다.
+  posts.forEach((post) => refreshCheers(post.id));
+}
+
+async function sharePost() {
+  if (!lastRecord) return;
+  shareBtn.disabled = true;
+  shareStatus.textContent = "올리는 중…";
+  try {
+    await cloudSavePost({
+      nickname: loadNickname(),
+      goalMinutes: lastRecord.goalMinutes,
+      elapsedSeconds: lastRecord.elapsedSeconds,
+      message: shareMessage.value.trim().slice(0, 100),
+      at: Date.now(),
+    });
+    shareStatus.textContent = "✅ 게시판에 올렸어요!";
+    shareMessage.disabled = true;
+  } catch (err) {
+    shareStatus.textContent = "⚠️ 올리지 못했어요. 인터넷을 확인해 주세요.";
+    shareBtn.disabled = false;
+  }
+}
+
+// ---- 순위표 ----
+
+let rankSort = "count";
+
+async function renderRank() {
+  rankStatus.textContent = "불러오는 중…";
+  rankStatus.classList.remove("offline");
+  rankList.replaceChildren();
+
+  let rows;
+  try {
+    rows = await cloudLoadRanking();
+  } catch (err) {
+    rankStatus.textContent = "⚠️ 인터넷에 연결되지 않아 순위를 볼 수 없어요.";
+    rankStatus.classList.add("offline");
+    return;
+  }
+
+  // 성공한 적이 없는 사람은 순위에 넣지 않는다.
+  rows = rows.filter((r) => r.successCount > 0);
+
+  if (rows.length === 0) {
+    rankStatus.textContent = "아직 성공한 사람이 없어요. 1등이 되어 보세요!";
+    return;
+  }
+
+  rows.sort((a, b) =>
+    rankSort === "count"
+      ? b.successCount - a.successCount || b.totalSeconds - a.totalSeconds
+      : b.totalSeconds - a.totalSeconds || b.successCount - a.successCount
+  );
+
+  rankStatus.textContent = "모두 " + rows.length + "명";
+  const me = loadNickname();
+
+  rows.forEach((row, index) => {
+    const li = document.createElement("li");
+    if (row.nickname === me) li.classList.add("me");
+
+    const no = document.createElement("span");
+    no.className = "rank-no";
+    no.textContent = index + 1;
+
+    const name = document.createElement("span");
+    name.className = "rank-name";
+    name.textContent = row.nickname;
+    const sub = document.createElement("span");
+    sub.className = "rank-sub";
+    sub.textContent =
+      rankSort === "count"
+        ? formatDuration(row.totalSeconds) + " 집중"
+        : row.successCount + "번 성공";
+    name.appendChild(sub);
+
+    const value = document.createElement("span");
+    value.className = "rank-value";
+    value.textContent =
+      rankSort === "count"
+        ? row.successCount + "번"
+        : formatDuration(row.totalSeconds);
+
+    li.append(no, name, value);
+    rankList.appendChild(li);
+  });
+}
+
 // ---- 버튼 연결 ----
 
 startBtn.addEventListener("click", startTimer);
@@ -329,6 +585,38 @@ clearBtn.addEventListener("click", () => {
 });
 
 renameBtn.addEventListener("click", () => askNickname());
+
+shareBtn.addEventListener("click", sharePost);
+
+boardBtn.addEventListener("click", () => {
+  showScreen(boardScreen);
+  renderBoard();
+});
+boardRefresh.addEventListener("click", renderBoard);
+document
+  .getElementById("board-back")
+  .addEventListener("click", () => showScreen(setupScreen));
+document
+  .getElementById("board-back-bottom")
+  .addEventListener("click", () => showScreen(setupScreen));
+
+rankBtn.addEventListener("click", () => {
+  showScreen(rankScreen);
+  renderRank();
+});
+rankSortButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    rankSort = btn.dataset.sort;
+    rankSortButtons.forEach((b) => b.classList.toggle("active", b === btn));
+    renderRank();
+  });
+});
+document
+  .getElementById("rank-back")
+  .addEventListener("click", () => showScreen(setupScreen));
+document
+  .getElementById("rank-back-bottom")
+  .addEventListener("click", () => showScreen(setupScreen));
 
 // ---- 닉네임 ----
 
