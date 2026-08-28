@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=18 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=19 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=18" />
+  <link rel="manifest" href="manifest.json?v=19" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=19" />
 </head>
 <body>
 
@@ -93,7 +93,10 @@
       <button type="button" class="quick-btn" data-minutes="50">50분</button>
     </div>
 
-    <p class="notice">⚠️ 타이머 중에 다른 앱이나 탭으로 나가면 실패로 처리돼요.</p>
+    <p class="notice">
+      ⚠️ 타이머 중에 다른 앱이나 탭으로 나가면 실패로 처리돼요.<br />
+      단, <b>5분 넘게</b> 자리를 비우면 실패가 아니라 <b>없던 일</b>이 됩니다.
+    </p>
     <p class="notice warning hidden" id="wakelock-warning">
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
@@ -261,8 +264,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=18"></script>
-  <script src="cloud.js?v=18"></script>
-  <script src="script.js?v=18"></script>
+  <script src="storage.js?v=19"></script>
+  <script src="cloud.js?v=19"></script>
+  <script src="script.js?v=19"></script>
 </body>
 </html>

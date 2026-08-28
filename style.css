@@ -664,3 +664,8 @@ h1 {
   background: #d1fae5;
   color: #047857;
 }
+
+/* 오래 자리를 비워 없던 일이 된 판 */
+.countdown.voided {
+  color: #9aa2b4;
+}
