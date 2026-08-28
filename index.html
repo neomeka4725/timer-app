@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=14 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=15 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=14" />
+  <link rel="manifest" href="manifest.json?v=15" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
 
@@ -134,7 +134,14 @@
       </p>
     </details>
 
-    <button type="button" id="sound-toggle" class="sound-toggle">🔔 끝나면 소리로 알려줘요</button>
+    <div class="sound-row">
+      <button type="button" id="sound-toggle" class="sound-toggle">🔔 끝나면 소리로 알려줘요</button>
+      <button type="button" id="sound-test" class="sound-test">🔊 미리 듣기</button>
+    </div>
+    <p class="notice">
+      시작하기 전에 <b>미리 듣기</b>로 지금 음량에서 들리는지 확인해 보세요.
+      앱이 기기 음량을 대신 올려줄 수는 없어요.
+    </p>
 
     <button type="button" id="start-btn" class="primary-btn">시작하기</button>
 
@@ -242,8 +249,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=14"></script>
-  <script src="cloud.js?v=14"></script>
-  <script src="script.js?v=14"></script>
+  <script src="storage.js?v=15"></script>
+  <script src="cloud.js?v=15"></script>
+  <script src="script.js?v=15"></script>
 </body>
 </html>
