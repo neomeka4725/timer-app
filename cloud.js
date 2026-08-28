@@ -273,13 +273,21 @@ async function hashPin(nickname, pin) {
     .join("");
 }
 
+// 실패했을 때 "무엇 때문에" 실패했는지 알 수 있도록 상태 번호를 함께 담는다.
+// 403은 Firebase 보안 규칙이 막은 것이고, 그 밖에는 대개 인터넷 문제다.
+function makeError(message, status) {
+  const err = new Error(message + " (" + status + ")");
+  err.status = status;
+  return err;
+}
+
 // 그 닉네임이 이미 있는지 본다. 없으면 null을 준다.
 async function cloudGetUser(nickname) {
   const res = await fetchWithTimeout(
     FIRESTORE_BASE + "/users/" + encodeURIComponent(nickname) + "?key=" + FIREBASE_KEY
   );
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error("닉네임 확인 실패 (" + res.status + ")");
+  if (!res.ok) throw makeError("닉네임 확인 실패", res.status);
   const data = await res.json();
   return { pinHash: data.fields.pinHash.stringValue };
 }

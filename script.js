@@ -862,9 +862,17 @@ async function confirmNickname() {
     showScreen(setupScreen);
     checkBoardUpdates();
   } catch (err) {
-    showNicknameError(
-      "인터넷에 연결되지 않아 확인할 수 없어요. 연결을 확인하고 다시 눌러주세요."
-    );
+    if (err.status === 403) {
+      // 인터넷은 되는데 Firebase가 막은 경우다. 원인을 정확히 알려준다.
+      showNicknameError(
+        "앱 설정이 아직 끝나지 않았어요.\n" +
+          "만든 사람에게 'Firebase 보안 규칙을 게시해 달라'고 알려주세요."
+      );
+    } else {
+      showNicknameError(
+        "인터넷에 연결되지 않아 확인할 수 없어요. 연결을 확인하고 다시 눌러주세요."
+      );
+    }
     nicknameSaveBtn.disabled = false;
     nicknameSaveBtn.textContent = "시작하기";
   }
