@@ -402,7 +402,9 @@ h1 {
   padding: 8px 10px;
   border: 1px solid #d7ddee;
   border-radius: 10px;
-  font-size: 0.9rem;
+  /* 아이폰은 입력칸 글자가 16px보다 작으면 누를 때 화면을 확대해 버린다.
+     확대되면 손으로 다시 줄여야 해서 응원 한마디 쓰기가 번거로워진다. */
+  font-size: 16px;
   font-family: inherit;
 }
 
@@ -507,4 +509,62 @@ h1 {
   vertical-align: top;
   border-radius: 50%;
   background: #e5484d;
+}
+
+/* ---- 방해금지 모드 안내 (접었다 펼 수 있음) ---- */
+
+.tip {
+  text-align: left;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid #e5e9f2;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.tip summary {
+  cursor: pointer;
+  color: #4c6fff;
+  font-weight: 600;
+  /* 사파리에서 기본 삼각형이 어색하게 보이는 것을 정리 */
+  list-style: none;
+}
+
+.tip summary::-webkit-details-marker {
+  display: none;
+}
+
+.tip summary::before {
+  content: "▸ ";
+}
+
+.tip[open] summary::before {
+  content: "▾ ";
+}
+
+.tip ol {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.tip li {
+  margin-bottom: 4px;
+}
+
+/* ---- 게시판에서 내가 쓴 글 ---- */
+
+.post.mine {
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.post-mine-tag {
+  font-size: 0.72rem;
+  color: #4c6fff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 1px 7px;
 }

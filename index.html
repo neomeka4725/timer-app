@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=8 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=9 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=8" />
+  <link rel="manifest" href="manifest.json?v=9" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
 
@@ -65,6 +65,22 @@
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
     </p>
+
+    <details class="tip">
+      <summary>🔕 알림 때문에 실패하지 않으려면</summary>
+      <p>
+        앱이 방해금지를 대신 켜줄 수는 없어요. 웹 앱은 기기 설정을 바꿀 권한이
+        없거든요. 시작하기 전에 직접 켜두면 훨씬 좋아요.
+      </p>
+      <ol>
+        <li><b>아이폰·아이패드</b>: 화면 오른쪽 위에서 아래로 쓸어내리기 →
+          초승달 모양(집중 모드) 누르기</li>
+        <li><b>갤럭시</b>: 화면 위에서 아래로 쓸어내리기 → 방해 금지 누르기</li>
+      </ol>
+      <p>
+        타이머가 끝나면 소리로 알려주니까, 켜두고 폰을 엎어놔도 괜찮아요.
+      </p>
+    </details>
 
     <button type="button" id="sound-toggle" class="sound-toggle">🔔 끝나면 소리로 알려줘요</button>
 
@@ -174,8 +190,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=8"></script>
-  <script src="cloud.js?v=8"></script>
-  <script src="script.js?v=8"></script>
+  <script src="storage.js?v=9"></script>
+  <script src="cloud.js?v=9"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>

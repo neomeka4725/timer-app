@@ -449,6 +449,15 @@ async function renderStats() {
   });
 }
 
+// 타이머가 도는 중에 새로고침하거나 탭을 닫으면 그때까지의 시간이 그냥 사라진다.
+// 실수로 그러는 일이 없도록 브라우저에게 한 번 물어봐 달라고 부탁한다.
+window.addEventListener("beforeunload", (event) => {
+  if (timerId === null) return;
+  event.preventDefault();
+  // 옛날 브라우저는 이 값을 봐야 경고를 띄운다.
+  event.returnValue = "";
+});
+
 // ---- 게시판 ----
 
 const CHEER_EMOJIS = ["👏", "🔥", "💪", "👍", "😍"];
@@ -474,6 +483,10 @@ function makePostCard(post) {
   const card = document.createElement("div");
   card.className = "post";
 
+  // 내 글은 눈에 띄게 표시한다. 응원이 달렸는지 찾기 쉬워진다.
+  const isMine = post.nickname === loadNickname();
+  if (isMine) card.classList.add("mine");
+
   const head = document.createElement("div");
   head.className = "post-head";
   const name = document.createElement("span");
@@ -485,7 +498,14 @@ function makePostCard(post) {
   const when = document.createElement("span");
   when.className = "post-when";
   when.textContent = formatDate(post.at);
-  head.append(name, badge, when);
+  head.append(name);
+  if (isMine) {
+    const mineTag = document.createElement("span");
+    mineTag.className = "post-mine-tag";
+    mineTag.textContent = "내 글";
+    head.append(mineTag);
+  }
+  head.append(badge, when);
   card.appendChild(head);
 
   if (post.message) {
