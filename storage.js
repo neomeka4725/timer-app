@@ -4,6 +4,25 @@
 
 const STORAGE_KEY = "wellness-timer-records";
 const NICKNAME_KEY = "wellness-timer-nickname";
+const PINHASH_KEY = "wellness-timer-pinhash";
+
+// PIN 기능을 넣으면서 그동안 쌓인 시험용 기록을 모두 버리고 새로 시작한다.
+// 이 번호가 기기에 저장된 번호와 다르면 이 기기의 기록을 한 번 싹 비운다.
+// 앞으로 또 처음부터 시작해야 할 일이 생기면 이 번호를 올리면 된다.
+const DATA_VERSION = "2";
+const VERSION_KEY = "wellness-timer-version";
+
+(function resetIfOldVersion() {
+  try {
+    if (localStorage.getItem(VERSION_KEY) === DATA_VERSION) return;
+    [STORAGE_KEY, NICKNAME_KEY, PINHASH_KEY, "wellness-timer-board-seen"].forEach(
+      (key) => localStorage.removeItem(key)
+    );
+    localStorage.setItem(VERSION_KEY, DATA_VERSION);
+  } catch (err) {
+    // 저장 공간을 못 쓰는 상태면 어차피 남는 기록도 없다.
+  }
+})();
 
 // 닉네임은 길면 게시판이 지저분해지므로 8자로 자른다.
 const NICKNAME_MAX = 8;
@@ -29,6 +48,24 @@ function saveNickname(name) {
 // 기록 하나의 모양:
 // { at: 저장시각(밀리초), goalMinutes: 목표분, elapsedSeconds: 실제로 버틴 초,
 //   result: "success" | "left" | "gaveup" }
+
+// 이 기기에서 PIN을 맞힌 적이 있으면 그 결과를 저장해 둔다.
+// 다음에 열 때 PIN을 다시 묻지 않기 위해서다.
+function loadPinHash() {
+  try {
+    return localStorage.getItem(PINHASH_KEY) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function savePinHash(hash) {
+  try {
+    localStorage.setItem(PINHASH_KEY, hash);
+  } catch (err) {
+    // 저장에 실패하면 다음에 PIN을 다시 물어볼 뿐이다.
+  }
+}
 
 // ---- 소리 켜기/끄기 ----
 // 수업 중에 소리가 나면 곤란하므로 끌 수 있어야 한다.
