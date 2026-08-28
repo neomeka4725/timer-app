@@ -89,6 +89,27 @@ function saveSoundOn(on) {
   }
 }
 
+// ---- 쉬었다 하기(뽀모도로) 켜짐 여부 ----
+
+const POMODORO_KEY = "wellness-timer-pomodoro";
+
+function loadPomodoroOn() {
+  try {
+    // 저장된 적이 없으면 꺼진 상태로 시작한다.
+    return localStorage.getItem(POMODORO_KEY) === "on";
+  } catch (err) {
+    return false;
+  }
+}
+
+function savePomodoroOn(on) {
+  try {
+    localStorage.setItem(POMODORO_KEY, on ? "on" : "off");
+  } catch (err) {
+    // 저장에 실패해도 이번 실행 동안은 그대로 쓴다.
+  }
+}
+
 // ---- 게시판을 마지막으로 본 시각 ----
 // 그 뒤에 올라온 글이나 응원이 있으면 빨간 점을 띄운다.
 

@@ -52,6 +52,10 @@ const rankSortButtons = document.querySelectorAll(".rank-sort");
 
 const soundToggle = document.getElementById("sound-toggle");
 const soundTest = document.getElementById("sound-test");
+const pomodoroToggle = document.getElementById("pomodoro-toggle");
+const roundBadge = document.getElementById("round-badge");
+const nextFocusBtn = document.getElementById("next-focus-btn");
+const stopPomoBtn = document.getElementById("stop-pomo-btn");
 const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
@@ -59,6 +63,21 @@ const clearBtn = document.getElementById("clear-btn");
 
 let timerId = null;
 let lastRecord = null; // 방금 끝낸 판 (게시판에 올릴 때 쓴다)
+
+// ---- 쉬었다 하기(뽀모도로) ----
+// 지금이 어떤 상태인지 한 곳에서 관리한다. 화면 이탈을 실패로 볼지 말지가
+// 여기에 달려 있어서, 이 값이 틀리면 억울한 실패가 생긴다.
+//   idle      : 타이머를 안 돌리는 중
+//   focus     : 집중 중 (화면을 벗어나면 실패)
+//   break     : 쉬는 중 (화면을 벗어나도 괜찮다)
+//   breakDone : 쉬는 시간이 끝나고 다음 집중을 기다리는 중
+let phase = "idle";
+let pomodoroOn = loadPomodoroOn();
+let breakTimerId = null;
+let breakEndTime = 0;
+let roundNo = 0; // 몇 번째 집중인지
+
+const BREAK_SECONDS = 5 * 60;
 let goalSeconds = 0; // 이번 판의 목표 시간(초)
 let endTime = 0; // 끝나야 하는 시각
 let remainingSeconds = 0;
@@ -225,6 +244,76 @@ soundTest.addEventListener("click", () => {
   vibrate();
 });
 
+// ---- 쉬었다 하기 (뽀모도로) ----
+
+function updatePomodoroToggle() {
+  pomodoroToggle.textContent = pomodoroOn
+    ? "🍅 쉬었다 하기 켜짐 (집중 후 5분 휴식)"
+    : "🍅 쉬었다 하기 꺼짐";
+  pomodoroToggle.classList.toggle("off", !pomodoroOn);
+}
+
+pomodoroToggle.addEventListener("click", () => {
+  pomodoroOn = !pomodoroOn;
+  savePomodoroOn(pomodoroOn);
+  updatePomodoroToggle();
+});
+
+// 쉬는 시간을 시작한다. 이때부터는 화면을 벗어나도 실패가 아니다.
+function startBreak() {
+  phase = "break";
+  breakEndTime = Date.now() + BREAK_SECONDS * 1000;
+
+  timerScreen.classList.add("resting");
+  countdownEl.classList.remove("failed");
+  countdownEl.textContent = formatTime(BREAK_SECONDS);
+  runningLabel.textContent = "☕ 쉬는 시간이에요. 폰 봐도 괜찮아요";
+  forgiveNote.classList.add("hidden");
+
+  cancelBtn.classList.add("hidden");
+  restartBtn.classList.add("hidden");
+  nextFocusBtn.textContent = "바로 집중 시작";
+  nextFocusBtn.classList.remove("hidden");
+  stopPomoBtn.classList.remove("hidden");
+
+  breakTimerId = setInterval(() => {
+    const left = Math.max(0, Math.round((breakEndTime - Date.now()) / 1000));
+    countdownEl.textContent = formatTime(left);
+    if (left <= 0) endBreak();
+  }, 250);
+}
+
+// 쉬는 시간이 끝났다. 다음 집중은 자동으로 시작하지 않는다.
+// 폰을 보고 있는 사이에 몰래 시작되면 돌아오자마자 실패로 기록되기 때문이다.
+function endBreak() {
+  clearInterval(breakTimerId);
+  breakTimerId = null;
+  phase = "breakDone";
+
+  runningLabel.textContent = "쉬는 시간 끝! 준비되면 눌러주세요";
+  nextFocusBtn.textContent = "▶️ 집중 시작";
+  // 화면은 이미 초록색이라 번쩍임 대신 소리와 진동으로만 알린다.
+  playChime();
+  vibrate();
+}
+
+function stopPomodoro() {
+  clearInterval(breakTimerId);
+  breakTimerId = null;
+  phase = "idle";
+  timerScreen.classList.remove("resting");
+  releaseWakeLock();
+  showScreen(setupScreen);
+}
+
+nextFocusBtn.addEventListener("click", () => {
+  clearInterval(breakTimerId);
+  breakTimerId = null;
+  startTimer();
+});
+
+stopPomoBtn.addEventListener("click", stopPomodoro);
+
 // ---- 홈 화면에 추가 안내 ----
 // 이미 홈 화면에서 열고 있으면 안내가 필요 없으므로 숨긴 채로 둔다.
 // standalone = 주소창 없이 앱처럼 열린 상태.
@@ -287,6 +376,24 @@ function formatDate(ms) {
 // ---- 타이머 ----
 
 function startTimer() {
+  // 쉬는 시간에서 이어서 시작한 것이면 회차를 하나 올리고,
+  // 그냥 새로 시작한 것이면 1회차부터 센다.
+  roundNo = phase === "break" || phase === "breakDone" ? roundNo + 1 : 1;
+  phase = "focus";
+
+  // 쉬는 시간 타이머가 남아 있으면 정리한다.
+  if (breakTimerId !== null) {
+    clearInterval(breakTimerId);
+    breakTimerId = null;
+  }
+  timerScreen.classList.remove("resting");
+  nextFocusBtn.classList.add("hidden");
+  stopPomoBtn.classList.add("hidden");
+
+  // 몇 번째 집중인지 보여준다. 쉬었다 하기를 안 쓰면 필요 없다.
+  roundBadge.textContent = roundNo + "번째 집중";
+  roundBadge.classList.toggle("hidden", !pomodoroOn);
+
   // 이미 도는 타이머가 있으면 반드시 먼저 멈춘다.
   // 안 그러면 옛 타이머가 계속 돌면서 기록이 중복으로 저장된다.
   // (버튼을 빠르게 두 번 누르는 것만으로도 일어날 수 있다)
@@ -366,21 +473,34 @@ function stopTimer(result) {
 function finishTimer() {
   stopTimer("success");
   alertFinished();
-  runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
+
   // 성공했을 때만 게시판에 자랑할 수 있게 한다.
+  // 쉬는 시간에도 그대로 보여줘서 쉬면서 올릴 수 있게 한다.
   shareMessage.value = "";
+  shareMessage.disabled = false;
   shareStatus.textContent = "";
   shareBtn.disabled = false;
   shareBox.classList.remove("hidden");
+
+  if (pomodoroOn) {
+    startBreak();
+  } else {
+    phase = "idle";
+    runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
+  }
 }
 
 function failTimer() {
+  phase = "idle";
+  timerScreen.classList.remove("resting");
   stopTimer("left");
   runningLabel.textContent = "😢 화면을 벗어나서 실패했어요";
   countdownEl.classList.add("failed");
 }
 
 function giveUpTimer() {
+  phase = "idle";
+  timerScreen.classList.remove("resting");
   stopTimer("gaveup");
   runningLabel.textContent = "🏳️ 포기했어요";
   countdownEl.classList.add("failed");
@@ -409,7 +529,8 @@ function showForgiveNote() {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (timerId === null) return; // 타이머가 안 돌면 상관없다
+  // 쉬는 중이거나 타이머를 안 돌리는 중이면 나가도 괜찮다.
+  if (phase !== "focus") return;
 
   if (document.hidden) {
     // 아직 실패로 정하지 않는다. 얼마나 나가 있었는지는 돌아와야 알 수 있다.
@@ -529,7 +650,8 @@ async function renderStats() {
 // 타이머가 도는 중에 새로고침하거나 탭을 닫으면 그때까지의 시간이 그냥 사라진다.
 // 실수로 그러는 일이 없도록 브라우저에게 한 번 물어봐 달라고 부탁한다.
 window.addEventListener("beforeunload", (event) => {
-  if (timerId === null) return;
+  // 쉬는 시간에 나가는 건 정상 행동이라 경고하지 않는다.
+  if (phase !== "focus") return;
   event.preventDefault();
   // 옛날 브라우저는 이 값을 봐야 경고를 띄운다.
   event.returnValue = "";
@@ -964,6 +1086,7 @@ pinInput.addEventListener("input", () => {
 
 updateMinutesDisplay();
 updateSoundToggle();
+updatePomodoroToggle();
 
 const savedNickname = loadNickname();
 if (savedNickname === "") {
