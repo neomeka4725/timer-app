@@ -583,3 +583,49 @@ h1 {
   font-size: 0.88rem;
   line-height: 1.6;
 }
+
+/* ---- 소리 스위치 + 미리 듣기 ---- */
+
+.sound-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sound-row .sound-toggle {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.sound-test {
+  flex: none;
+  padding: 12px 14px;
+  border: 1px solid #d7ddee;
+  border-radius: 12px;
+  background: #fff;
+  color: #4c6fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ---- 끝났을 때 화면 번쩍임 ---- */
+/* 음량이 작아 소리를 못 들어도 눈으로 알 수 있게 한다. */
+
+@keyframes celebrate {
+  0%, 100% { background: transparent; }
+  50% { background: #bbf7d0; }
+}
+
+#timer-screen.celebrate {
+  border-radius: 20px;
+  animation: celebrate 0.55s ease-in-out 5;
+}
+
+/* 화면 움직임을 불편해하는 사람에게는 번쩍임 대신 은은한 배경만 */
+@media (prefers-reduced-motion: reduce) {
+  #timer-screen.celebrate {
+    animation: none;
+    background: #bbf7d0;
+  }
+}

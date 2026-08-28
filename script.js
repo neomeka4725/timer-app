@@ -51,6 +51,7 @@ const rankList = document.getElementById("rank-list");
 const rankSortButtons = document.querySelectorAll(".rank-sort");
 
 const soundToggle = document.getElementById("sound-toggle");
+const soundTest = document.getElementById("sound-test");
 const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
@@ -138,29 +139,67 @@ function wakeUpAudio() {
   }
 }
 
-// 도-미-솔 세 음을 차례로 울린다.
+// 알림 소리를 울린다.
+// 기기 음량이 낮으면 안 들리는데, 웹 앱은 기기 음량을 올릴 권한이 없다.
+// 그래서 "같은 음량에서 최대한 잘 들리게" 만드는 쪽으로 해결한다.
+//  - 멜로디보다 반복되는 삐- 소리가 훨씬 잘 들린다
+//  - 삼각파는 사인파보다 배음이 많아 같은 크기에서도 또렷하다
+//  - 한 번 울리고 마는 대신 3세트를 반복해 놓칠 확률을 줄인다
 function playChime() {
   if (!soundOn || !audioCtx) return;
   try {
-    const notes = [523.25, 659.25, 783.99];
-    notes.forEach((hz, i) => {
-      const start = audioCtx.currentTime + i * 0.18;
+    const beeps = [];
+    for (let set = 0; set < 3; set++) {
+      const base = set * 0.85;
+      beeps.push({ at: base, hz: 880 });
+      beeps.push({ at: base + 0.22, hz: 1175 });
+      beeps.push({ at: base + 0.44, hz: 880 });
+    }
+
+    beeps.forEach((b) => {
+      const start = audioCtx.currentTime + b.at;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = hz;
-      // 소리가 뚝 끊기면 "딱" 하는 잡음이 나므로 부드럽게 줄인다.
+      osc.type = "triangle";
+      osc.frequency.value = b.hz;
+      // 소리가 뚝 끊기면 "딱" 하는 잡음이 나므로 부드럽게 올렸다 내린다.
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+      gain.gain.exponentialRampToValueAtTime(0.7, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.19);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start(start);
-      osc.stop(start + 0.55);
+      osc.stop(start + 0.21);
     });
   } catch (err) {
     // 소리가 안 나도 타이머는 그대로 동작해야 한다.
   }
+}
+
+// 갤럭시 등에서는 진동도 울린다. 아이폰·아이패드는 이 기능이 없어서
+// 조용히 넘어간다. 음량이 낮을 때를 대비한 두 번째 수단이다.
+function vibrate() {
+  try {
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
+  } catch (err) {
+    // 진동이 안 돼도 상관없다.
+  }
+}
+
+// 소리를 못 들어도 눈으로 알 수 있게 화면을 몇 번 밝게 번쩍인다.
+// 타이머 중에는 화면이 켜져 있으므로(화면 꺼짐 방지) 눈에 띈다.
+function flashScreen() {
+  timerScreen.classList.remove("celebrate");
+  // 클래스를 뗐다 바로 붙이면 브라우저가 눈치채지 못하므로 한 박자 쉰다.
+  void timerScreen.offsetWidth;
+  timerScreen.classList.add("celebrate");
+}
+
+// 끝났을 때 알리는 세 가지를 한꺼번에.
+function alertFinished() {
+  playChime();
+  vibrate();
+  flashScreen();
 }
 
 soundToggle.addEventListener("click", () => {
@@ -172,6 +211,18 @@ soundToggle.addEventListener("click", () => {
     wakeUpAudio();
     playChime();
   }
+});
+
+// 미리 듣기: 지금 기기 음량으로 실제로 들리는지 확인할 수 있게 한다.
+soundTest.addEventListener("click", () => {
+  if (!soundOn) {
+    soundOn = true;
+    saveSoundOn(true);
+    updateSoundToggle();
+  }
+  wakeUpAudio();
+  playChime();
+  vibrate();
 });
 
 // ---- 홈 화면에 추가 안내 ----
@@ -255,6 +306,7 @@ function startTimer() {
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
   shareBox.classList.add("hidden");
+  timerScreen.classList.remove("celebrate");
 
   // 이번 판의 봐주기 횟수를 초기화한다.
   forgiveCount = 0;
@@ -313,7 +365,7 @@ function stopTimer(result) {
 
 function finishTimer() {
   stopTimer("success");
-  playChime();
+  alertFinished();
   runningLabel.textContent = "🎉 목표 시간을 지켰어요!";
   // 성공했을 때만 게시판에 자랑할 수 있게 한다.
   shareMessage.value = "";
