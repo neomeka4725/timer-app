@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=7 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=8 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="manifest" href="manifest.json?v=8" />
+  <meta name="theme-color" content="#4c6fff" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
 
@@ -63,11 +66,13 @@
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
     </p>
 
+    <button type="button" id="sound-toggle" class="sound-toggle">🔔 끝나면 소리로 알려줘요</button>
+
     <button type="button" id="start-btn" class="primary-btn">시작하기</button>
 
     <div class="nav-row">
       <button type="button" id="stats-btn" class="text-btn">📊<br />내 기록</button>
-      <button type="button" id="board-btn" class="text-btn">💬<br />게시판</button>
+      <button type="button" id="board-btn" class="text-btn">💬<span class="dot hidden" id="board-dot"></span><br />게시판</button>
       <button type="button" id="rank-btn" class="text-btn">🏆<br />순위표</button>
     </div>
   </section>
@@ -77,6 +82,7 @@
     <p class="running-label" id="running-label">폰을 멀리하고 목표를 지켜보세요</p>
 
     <div class="countdown" id="countdown">10:00</div>
+    <p class="forgive-note hidden" id="forgive-note"></p>
 
     <button type="button" id="cancel-btn" class="secondary-btn">포기하기</button>
 
@@ -168,8 +174,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=7"></script>
-  <script src="cloud.js?v=7"></script>
-  <script src="script.js?v=7"></script>
+  <script src="storage.js?v=8"></script>
+  <script src="cloud.js?v=8"></script>
+  <script src="script.js?v=8"></script>
 </body>
 </html>

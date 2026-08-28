@@ -1,0 +1,17 @@
+{
+  "name": "디지털 웰빙 타이머",
+  "short_name": "웰빙 타이머",
+  "description": "목표 시간을 정해 폰과 멀어지고, 반 친구들과 기록을 나누는 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef4ff",
+  "theme_color": "#4c6fff",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
