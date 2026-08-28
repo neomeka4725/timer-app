@@ -219,6 +219,14 @@ function formatDate(ms) {
 // ---- 타이머 ----
 
 function startTimer() {
+  // 이미 도는 타이머가 있으면 반드시 먼저 멈춘다.
+  // 안 그러면 옛 타이머가 계속 돌면서 기록이 중복으로 저장된다.
+  // (버튼을 빠르게 두 번 누르는 것만으로도 일어날 수 있다)
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+
   goalSeconds = Number(minutesSlider.value) * 60;
   remainingSeconds = goalSeconds;
   // 실제 시계를 기준으로 계산해야 시간이 밀리지 않는다.
