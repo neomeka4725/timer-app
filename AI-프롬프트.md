@@ -1,13 +1,36 @@
 # ChatGPT에게 붙여넣을 현황 설명
 
-ChatGPT는 이 저장소를 볼 수 없다. 대화를 시작할 때 아래 회색 상자 안의 글을
-**통째로 복사해서 붙여넣어야** 엉뚱한 코드를 주지 않는다.
-
-붙여넣은 다음, **고치려는 파일의 내용도 복사해서 같이 준다.**
-(GitHub에서 파일을 열고 오른쪽 위 복사 아이콘을 누르면 된다.)
+ChatGPT는 이 저장소를 자동으로 읽지 못한다. 대화를 시작할 때 아래 회색 상자
+안의 글을 **통째로 복사해서 붙여넣어야** 엉뚱한 코드를 주지 않는다.
 
 > ⚠️ 코드를 크게 고쳤다면 이 문서도 같이 고쳐야 한다.
-> 특히 파일 목록, 함수 이름, `?v=` 번호가 실제와 달라지면 ChatGPT가 헷갈린다.
+> 파일 목록, 함수 이름, 보관함 이름, `?v=` 번호가 실제와 달라지면
+> ChatGPT가 오히려 더 헷갈린다.
+
+---
+
+## 파일 내용을 주는 두 가지 방법
+
+### 방법 1. 주소를 준다 (저장소가 공개라 로그인 없이 읽힌다)
+
+ChatGPT가 웹을 볼 수 있는 상태라면 이 주소들을 주면 된다.
+
+```
+https://raw.githubusercontent.com/neomeka4725/timer-app/main/index.html
+https://raw.githubusercontent.com/neomeka4725/timer-app/main/script.js
+https://raw.githubusercontent.com/neomeka4725/timer-app/main/style.css
+https://raw.githubusercontent.com/neomeka4725/timer-app/main/storage.js
+https://raw.githubusercontent.com/neomeka4725/timer-app/main/cloud.js
+```
+
+읽었다고 하면 **정말 읽었는지 확인해야 한다.** 예를 들어
+"script.js에서 CANCEL_SECONDS 값이 뭐야?"라고 물어보고 `5 * 60`이라고
+답하면 진짜로 읽은 것이다. 엉뚱한 답이 오면 방법 2를 쓴다.
+
+### 방법 2. 파일 내용을 복사해서 붙여넣는다 (제일 확실하다)
+
+GitHub에서 파일을 열고 오른쪽 위 복사 아이콘을 누른 뒤 붙여넣는다.
+방법 1이 안 되거나 미덥지 않으면 이쪽을 쓴다.
 
 ---
 
@@ -26,24 +49,25 @@ ChatGPT는 이 저장소를 볼 수 없다. 대화를 시작할 때 아래 회�
   Firestore REST API를 fetch로 직접 호출한다.
   firebase SDK를 import 하거나 <script>로 불러오는 코드는 절대 주지 마라.
 - 웹 앱은 다른 앱을 강제로 차단할 수 없다. "앱 차단" 기능은 제안하지 마라.
-- 로그인·회원가입이 없다. 닉네임(8자 이하)만으로 사람을 구분한다.
+- 로그인·회원가입이 없다. 닉네임(8자 이하) + 숫자 4자리로 사람을 구분한다.
 
 
 ■ 파일 구성
 
 - index.html    : 화면 6개의 구조. 모든 화면이 이 파일 안에 있다.
 - style.css     : 디자인
-- script.js     : 화면 전환, 타이머, 소리, 각 화면 그리기
+- script.js     : 화면 전환, 타이머, 소리, 쉬는 시간, 각 화면 그리기
 - storage.js    : 이 기기 안에 저장 (localStorage)
 - cloud.js      : Firebase와 통신
 - manifest.json : 홈 화면에 추가했을 때 앱처럼 보이게 하는 설정
 - icon-192.png, icon-512.png : 앱 아이콘
+- README.md, AI-프롬프트.md, 변경기록.md : 문서
 
 화면 6개는 전부 index.html 안에 있고, hidden 클래스를 붙였다 뗐다 하며
 하나씩 보여준다. script.js의 showScreen(화면)이 그 일을 한다.
-  nickname-screen : 닉네임 정하기 (처음 들어왔을 때만)
+  nickname-screen : 닉네임과 숫자 4자리 정하기
   setup-screen    : 목표 시간 정하기
-  timer-screen    : 타이머 실행 + 결과
+  timer-screen    : 타이머 실행 + 쉬는 시간 + 결과
   stats-screen    : 내 기록
   board-screen    : 우리 반 게시판
   rank-screen     : 순위표
@@ -52,69 +76,100 @@ ChatGPT는 이 저장소를 볼 수 없다. 대화를 시작할 때 아래 회�
 ■ 이미 완성된 기능 (다시 만들지 마라)
 
 1. 목표 시간 설정과 타이머 (슬라이더 1~120분, 10/25/50분 빠른 버튼)
-2. 타이머 중 다른 앱·탭으로 나가면 실패 처리 (Page Visibility API)
+   실제 시계 기준으로 계산한다. 1초씩 세면 시간이 밀린다.
+2. 화면 이탈 판정 — 나가 있던 시간에 따라 세 갈래
+     5초 이하   봐준다 (한 판에 최대 3번)
+     5초 ~ 5분  실패로 기록한다 (result: "left")
+     5분 초과   기록하지 않고 없던 일로 한다
 3. 타이머 중 화면이 꺼지지 않게 함 (Screen Wake Lock)
 4. 개인 기록과 통계 (성공/실패 횟수, 성공률, 누적 시간, 최근 기록 10개)
-   - 기기가 달라도 닉네임이 같으면 기록이 따라온다
+   - 기기가 달라도 같은 닉네임 + 같은 숫자면 기록이 따라온다
 5. 공유 게시판 (성공했을 때만 올릴 수 있음, 이모지 5종 + 30자 응원)
 6. 순위표 (성공 횟수 / 누적 시간 두 기준으로 전환, 내 순위 강조)
 7. 인터넷이 끊겨도 타이머와 기록 저장은 되고, 연결되면 밀린 기록을 올린다
-8. 타이머가 끝나면 소리로 알린다 (Web Audio로 직접 음을 만든다.
-   소리 파일은 없다. 수업 중을 위해 끄는 스위치가 있다)
-9. 짧은 이탈 봐주기 — 5초 안에 돌아오면 최대 3번까지 실패로 치지 않는다
-10. 홈 화면에 추가하면 앱처럼 보인다 (manifest.json)
-11. 게시판에 새 글이나 내 글에 달린 응원이 있으면 버튼에 빨간 점을 띄운다
+8. 끝났을 때 알림 — 소리(Web Audio로 직접 만든다. 소리 파일 없음)
+   + 진동(아이폰은 미지원) + 화면 번쩍임. 끄는 스위치와 미리 듣기 버튼이 있다
+9. 쉬었다 하기(뽀모도로) — 목표 시간이 끝나면 5분 쉬고 다음 집중으로 이어진다
+10. 닉네임 + 숫자 4자리 — 같은 닉네임을 쓰려면 그 숫자를 맞혀야 한다
+11. 홈 화면에 추가하면 앱처럼 보인다 (manifest.json). 안내도 앱 안에 있다
+12. 게시판에 새 글이나 내 글에 달린 응원이 있으면 버튼에 빨간 점을 띄운다
 
 
 ■ Firestore 데이터 구조 (프로젝트 ID: timer-app-6965c, 무료 Spark 요금제)
 
-records — 타이머 기록. 내 기록과 순위표에 쓴다.
+※ 보관함 이름 끝에 _v2 가 붙어 있다. 예전 시험용 데이터를 버리려고 이름을
+   바꿨다. records / posts (v2 없는 것)는 보안 규칙에서 빠져 있어 쓸 수 없다.
+
+records_v2 — 타이머 기록. 내 기록과 순위표에 쓴다.
   nickname       문자 (1~8자)
   goalMinutes    숫자 (1~600)      목표 시간(분)
   elapsedSeconds 숫자 (0~36000)    실제로 버틴 시간(초)
   result         문자              success / left(화면이탈) / gaveup(포기)
   at             시각
 
-posts — 게시판 글
+posts_v2 — 게시판 글
   nickname, goalMinutes, elapsedSeconds, message(100자까지), at
 
-posts/{글번호}/cheers — 응원
+posts_v2/{글번호}/cheers — 응원
   nickname, emoji(8자까지), message(30자까지), at
+
+users/{닉네임} — 닉네임 주인 확인용
+  pinHash        문자 (64자)  숫자 4자리를 SHA-256으로 바꾼 값
+  at             시각
+  ※ 만들기만 되고 고치거나 지울 수 없다. 그래서 비밀번호를 바꿀 수 없다.
 
 
 ■ 주요 함수
 
 cloud.js
-  cloudSaveRecord(record)      기록 1개 올리기
-  cloudLoadRecords(nickname)   그 닉네임의 기록 전부 가져오기 (최대 500개)
-  cloudSavePost(post)          게시판에 글 올리기
-  cloudLoadPosts(개수)          최근 글 가져오기 (지금은 20개)
+  cloudSaveRecord(record)          기록 1개 올리기
+  cloudLoadRecords(nickname)       그 닉네임의 기록 전부 (최대 500개)
+  cloudSavePost(post)              게시판에 글 올리기
+  cloudLoadPosts(개수)              최근 글 가져오기 (지금은 20개)
   cloudLoadMyPosts(nickname, 개수)  내가 쓴 글만 가져오기
-  cloudSaveCheer(postId, cheer) 응원 올리기
-  cloudLoadCheers(postId)      그 글의 응원 가져오기
-  cloudLoadRanking()           records 전부 읽어 닉네임별로 합치기 (최대 2000개)
-                               반환: [{nickname, successCount, totalSeconds, tries}]
-                               ※ 날짜(at)를 버리고 합치기 때문에
-                                 "언제 했는지"는 알 수 없다
+  cloudSaveCheer(postId, cheer)    응원 올리기
+  cloudLoadCheers(postId)          그 글의 응원 가져오기
+  cloudLoadRanking()               records_v2 전부 읽어 닉네임별로 합치기
+                                   반환: [{nickname, successCount,
+                                          totalSeconds, tries}]
+                                   ※ 날짜(at)를 버리고 합치기 때문에
+                                     "언제 했는지"는 알 수 없다
+  hashPin(nickname, pin)           숫자 4자리를 알아볼 수 없게 바꾸기
+  cloudGetUser(nickname)           그 닉네임이 이미 있는지 (없으면 null)
+  cloudCreateUser(nickname, hash)  새 닉네임 등록
 
 storage.js
   loadNickname() / saveNickname(이름)
+  loadPinHash() / savePinHash(해시)
   loadRecords() / saveRecord(기록) / clearRecords()
-  loadSoundOn() / saveSoundOn(참거짓)     소리 켜짐 여부
-  loadBoardSeen() / saveBoardSeen(밀리초)  게시판을 마지막으로 본 시각
-  summarize(기록목록)  → {successCount, failCount, totalSeconds, successRate}
+  markRecordSynced(at) / unsyncedRecords()
+  loadSoundOn() / saveSoundOn(참거짓)
+  loadPomodoroOn() / savePomodoroOn(참거짓)
+  loadBoardSeen() / saveBoardSeen(밀리초)
+  summarize(기록목록) → {successCount, failCount, totalSeconds, successRate}
+  ※ DATA_VERSION 값이 기기에 저장된 것과 다르면 이 기기의 기록을 한 번 비운다.
+    앞으로 또 초기화가 필요하면 이 번호만 올리면 된다.
 
 script.js
   showScreen(화면)             화면 전환
   formatDuration(초)          "1시간 25분" 같은 문자로 바꿈
   formatDate(밀리초)           "8월 28일 오후 3:20" 같은 문자로 바꿈
   renderStats() / renderBoard() / renderRank()   각 화면 그리기
-  playChime()                 끝났을 때 소리 울리기
+  alertFinished()             소리 + 진동 + 화면 번쩍임을 한꺼번에
+  playChime() / vibrate() / flashScreen()
+  startBreak() / endBreak() / stopPomodoro()    쉬는 시간
   checkBoardUpdates()         게시판 빨간 점 확인
 
-타이머 화면에서 주의할 점:
-  화면을 벗어나 있는 동안에는 성공으로 끝내지 않는다(script.js의 setInterval 안).
-  이 처리를 지우면 나갔다 오기만 해도 성공하는 꼼수가 생긴다.
+
+■ 타이머 화면에서 절대 건드리면 안 되는 것 두 가지
+
+1. phase 라는 값으로 지금 상태를 관리한다.
+     idle / focus / break / breakDone
+   화면 이탈을 실패로 볼지 말지가 여기에 달려 있다. focus 일 때만 실패로
+   본다. 이 값이 틀리면 쉬는 시간에 화장실 갔다고 실패 처리된다.
+
+2. setInterval 안에 "화면을 벗어나 있는 동안에는 성공으로 끝내지 않는다"는
+   조건이 있다. 이걸 지우면 나갔다 오기만 해도 성공하는 꼼수가 생긴다.
 
 
 ■ 반드시 지킬 것
@@ -123,25 +178,29 @@ script.js
    파일 전체를 새로 줄지, 일부만 바꿀지 명확히 구분해라.
 
 2. style.css나 .js 파일을 고쳤으면, index.html에 있는 ?v= 숫자를
-   전부 같은 값으로 하나 올려야 한다고 반드시 알려줘라.
+   전부 같은 값으로 하나 올려야 한다고 반드시 알려줘라. (지금은 v=19)
    이걸 빼먹으면 브라우저가 옛날 파일을 계속 써서,
    새 버튼이 화면에 보이는데 눌러도 아무 반응이 없다. 원인 찾기가 매우 어렵다.
 
 3. 사용자가 쓴 글을 화면에 넣을 때 innerHTML을 절대 쓰지 마라. textContent만 써라.
    친구가 장난으로 HTML 태그를 적어도 그냥 글자로만 보이게 해야 한다.
 
-4. Firebase에 새로운 형태의 데이터를 저장하는 코드라면,
+4. style.css에서 요소를 숨길 때는 hidden 클래스를 쓴다. 새로 만드는 규칙에
+   display 를 넣을 때는 hidden 과 부딪히지 않는지 확인해라. 실제로 .dot 이
+   .hidden 을 덮어써서 게시판 빨간 점이 늘 켜져 있던 적이 있다.
+
+5. Firebase에 새로운 형태의 데이터를 저장하는 코드라면,
    Firestore 보안 규칙도 함께 고쳐야 한다고 먼저 알려줘라.
    규칙에 적혀 있지 않은 필드가 하나라도 섞이면 저장이 통째로 거부된다
    (403 오류). 이미 있는 데이터로 계산만 하는 기능이면 규칙은 안 고쳐도 된다.
 
-5. 한 번에 한 가지씩만 해라. 여러 기능을 한꺼번에 만들지 마라.
+6. 한 번에 한 가지씩만 해라. 여러 기능을 한꺼번에 만들지 마라.
 
-6. 나는 코딩이 거의 처음이다. 전문 용어는 풀어서 설명해라.
+7. 나는 코딩이 거의 처음이다. 전문 용어는 풀어서 설명해라.
 
-7. 확실하지 않으면 추측하지 말고 모른다고 말해라.
+8. 확실하지 않으면 추측하지 말고 모른다고 말해라.
 
-8. 한국어로 답해라.
+9. 한국어로 답해라.
 
 
 이제 고칠 파일 내용을 붙여넣을게.
@@ -157,7 +216,7 @@ script.js
 ### 티어 (등급)
 
 ```
-티어 기능을 만들려고 해. 이미 있는 records 데이터로 계산만 하면 되니까
+티어 기능을 만들려고 해. 이미 있는 records_v2 데이터로 계산만 하면 되니까
 Firebase 규칙은 안 고쳐도 돼.
 
 미리 정해야 할 문제가 있어. 누적 성공 횟수나 누적 시간만으로 등급을 매기면,
@@ -170,7 +229,7 @@ Firebase 규칙은 안 고쳐도 돼.
 
 ```
 연속 학습 일수(며칠 연속 성공했는지)를 만들려고 해.
-이미 있는 records 데이터로 계산만 하면 되니까 Firebase 규칙은 안 고쳐도 돼.
+이미 있는 records_v2 데이터로 계산만 하면 되니까 Firebase 규칙은 안 고쳐도 돼.
 
 주의할 점 세 가지:
 1) Firestore에 저장된 at은 UTC(세계표준시)라서, 그냥 날짜를 뽑으면
@@ -190,4 +249,14 @@ Firebase 규칙은 안 고쳐도 돼.
 전체 누적 순위는 이미 있으니, 그것과 별개로 주간 순위를 추가하고 싶어.
 늦게 시작한 친구도 매주 새로 겨룰 수 있게 하는 게 목적이야.
 cloudLoadRanking()이 날짜를 버리는 문제는 여기서도 똑같이 걸린다.
+```
+
+### 오늘 집중한 시간
+
+```
+설정 화면 맨 위에 "오늘 1시간 20분 집중" 처럼 오늘 기록만 보여주려고 해.
+지금 통계는 전체 누적만 있어서 오늘 얼마나 했는지 알 수가 없어.
+
+연속 학습과 똑같이 at이 UTC라는 문제가 걸린다. 한국 시간 기준으로
+"오늘"을 잘라야 해.
 ```
