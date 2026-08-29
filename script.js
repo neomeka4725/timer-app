@@ -24,6 +24,7 @@ const missionLabel = document.getElementById("mission-label");
 const runningLabel = document.getElementById("running-label");
 const countdownEl = document.getElementById("countdown");
 const ringProgress = document.getElementById("ring-progress");
+const ringSub = document.getElementById("ring-sub");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
@@ -277,9 +278,11 @@ function startBreak() {
   breakEndTime = Date.now() + BREAK_SECONDS * 1000;
 
   timerScreen.classList.add("resting");
+  setResultState("");
   countdownEl.classList.remove("failed");
   renderCountdown(BREAK_SECONDS);
   setRing(1);
+  setRingSub("쉬고 오세요");
   // 쉬는 화면은 초록색이라 어두운 집중 화면에서 빠져나온다.
   setFocusMode(false);
   runningLabel.textContent = "☕ 쉬는 시간이에요. 폰 봐도 괜찮아요";
@@ -381,6 +384,10 @@ function setRing(left, failed) {
 
 // 시간을 화면에 쓴다. 초 단위는 흐리게 해서 자꾸 쳐다보지 않게 한다.
 // (폰을 멀리하라는 앱이 화면을 계속 보게 만들면 앞뒤가 안 맞는다)
+function setRingSub(text) {
+  ringSub.textContent = text;
+}
+
 function renderCountdown(totalSeconds) {
   const text = formatTime(totalSeconds);
   const colon = text.indexOf(":");
@@ -396,6 +403,16 @@ function renderCountdown(totalSeconds) {
 // 덜 부시다. 글을 읽는 화면(기록·게시판)은 밝은 쪽이 잘 읽혀서 그대로 둔다.
 function setFocusMode(on) {
   document.body.classList.toggle("focus-mode", on);
+}
+
+// 판이 끝났을 때 화면 전체의 색을 바꾼다. "" 은 아무 결과도 아닌 상태.
+// 성공은 초록, 실패·포기는 붉은색. 번쩍임이 끝난 뒤에도 색이 남아 있어야
+// 무슨 결과였는지 나중에 봐도 알 수 있다.
+function setResultState(kind) {
+  timerScreen.classList.toggle("done-success", kind === "success");
+  timerScreen.classList.toggle("done-fail", kind === "fail");
+  // 성공했을 때는 게시판에 올리는 쪽이 주인공이라 "다시 하기"를 뒤로 뺀다.
+  restartBtn.classList.toggle("as-secondary", kind === "success");
 }
 
 function formatTime(totalSeconds) {
@@ -440,6 +457,7 @@ function startTimer() {
     breakTimerId = null;
   }
   timerScreen.classList.remove("resting");
+  setResultState("");
   nextFocusBtn.classList.add("hidden");
   stopPomoBtn.classList.add("hidden");
 
@@ -463,6 +481,7 @@ function startTimer() {
   renderCountdown(remainingSeconds);
   countdownEl.classList.remove("failed");
   setRing(1);
+  setRingSub("남았어요");
   setFocusMode(true);
 
   // 무엇에 집중하는지 적어두면 딴짓하려다 한 번 멈칫하게 된다.
@@ -543,8 +562,13 @@ function finishTimer() {
   stopTimer("success");
   // 다 채웠으니 링도 꽉 찬 모습으로 둔다.
   setRing(1);
+  // 남은 시간(0:00)이 아니라 채운 시간을 보여준다. 끝난 화면에서 0:00 은
+  // 아무 뜻도 없고, "25:00 해냈다"가 훨씬 읽기 쉽다.
+  renderCountdown(goalSeconds);
+  setRingSub("채웠어요");
   // 번쩍임은 밝은 화면에서 보여야 자연스러우므로 먼저 어둠을 푼다.
   setFocusMode(false);
+  setResultState("success");
   alertFinished();
 
   // 성공했을 때만 게시판에 자랑할 수 있게 한다.
@@ -570,8 +594,19 @@ function failTimer(awaySeconds) {
   setFocusMode(false);
   stopTimer("left", awaySeconds);
   runningLabel.textContent = "😢 화면을 벗어나서 실패했어요";
+  showResultProgress();
+}
+
+// 실패·포기 화면. 남은 시간 대신 "얼마나 했는지"를 보여준다.
+// 남은 시간을 보여주면 실패 화면에 뜬 숫자가 무슨 뜻인지 알 수 없다.
+// 기록에 남는 값과 같은 숫자라서 나중에 기록 화면과도 맞아떨어진다.
+function showResultProgress() {
+  const done = lastRecord ? lastRecord.elapsedSeconds : 0;
+  renderCountdown(done);
+  setRingSub("집중했어요");
   countdownEl.classList.add("failed");
-  setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds, true);
+  setRing(goalSeconds === 0 ? 0 : done / goalSeconds, true);
+  setResultState("fail");
 }
 
 function giveUpTimer() {
@@ -580,8 +615,7 @@ function giveUpTimer() {
   setFocusMode(false);
   stopTimer("gaveup");
   runningLabel.textContent = "🏳️ 포기했어요";
-  countdownEl.classList.add("failed");
-  setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds, true);
+  showResultProgress();
 }
 
 // ---- 화면을 벗어났을 때 ----

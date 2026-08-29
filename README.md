@@ -52,14 +52,14 @@
 `index.html` 맨 위와 맨 아래에 이렇게 되어 있다.
 
 ```html
-<link rel="stylesheet" href="style.css?v=20" />
-<script src="storage.js?v=20"></script>
-<script src="cloud.js?v=20"></script>
-<script src="script.js?v=20"></script>
+<link rel="stylesheet" href="style.css?v=21" />
+<script src="storage.js?v=21"></script>
+<script src="cloud.js?v=21"></script>
+<script src="script.js?v=21"></script>
 ```
 
-`?v=20`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
-**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=21`).
+`?v=21`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
+**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=22`).
 
 안 올리면 어떻게 되나: 사파리가 예전 `script.js`를 그대로 쓴다. 새 버튼은
 화면에 보이는데 눌러도 아무 반응이 없다. 원인을 찾기 매우 어렵다.
