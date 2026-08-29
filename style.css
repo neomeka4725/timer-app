@@ -67,7 +67,8 @@ h1 {
 
 .quick-btn {
   flex: 1;
-  padding: 10px 0;
+  /* 손가락으로 누르는 곳은 44px 이상이어야 한다는 지침에 맞춘다 */
+  padding: 13px 0;
   border-radius: 12px;
   border: 1px solid #d7ddee;
   background: #fff;
@@ -105,14 +106,77 @@ h1 {
 
 .running-label {
   color: #6b7280;
-  margin-bottom: 40px;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+/* 이번 판에 무엇을 하기로 했는지 */
+.mission-label {
+  margin: 0 0 20px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1c2333;
+  overflow-wrap: anywhere;
+}
+
+.mission-input {
+  text-align: left;
+  font-size: 1rem;
+  padding: 15px 16px;
+  margin-bottom: 20px;
+}
+
+/* ---- 남은 시간 링 ---- */
+/* 숫자를 읽지 않아도 얼마나 남았는지 한눈에 보이게 하는 동그란 막대. */
+
+.ring-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 276px;
+  margin: 0 auto 24px;
+}
+
+/* -90도 돌려서 12시 방향에서 시작하게 한다 */
+.ring {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: rotate(-90deg);
+}
+
+.ring-track,
+.ring-progress {
+  fill: none;
+  stroke-width: 10;
+}
+
+.ring-track {
+  stroke: #e5e9f2;
+}
+
+.ring-progress {
+  stroke: #4c6fff;
+  stroke-linecap: round;
+  /* 줄어드는 게 뚝뚝 끊기지 않게 */
+  transition: stroke-dashoffset 0.3s linear;
 }
 
 .countdown {
-  font-size: 4.5rem;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  margin-bottom: 16px;
+  letter-spacing: -1.5px;
+}
+
+/* 초 단위는 흐리게 한다. 또렷하면 자꾸 쳐다보게 되는데,
+   폰을 멀리하라는 앱이 화면을 계속 보게 만들면 앞뒤가 안 맞는다. */
+.countdown .sec {
+  opacity: 0.42;
 }
 
 #timer-screen .primary-btn {
@@ -129,6 +193,10 @@ h1 {
 /* 실패했을 때 남은 시간을 빨간색으로 */
 .countdown.failed {
   color: #e5484d;
+}
+
+.ring-progress.failed {
+  stroke: #e5484d;
 }
 
 /* ---- 닉네임 ---- */
@@ -180,8 +248,8 @@ h1 {
 
 .back-btn {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #d7ddee;
   border-radius: 12px;
   background: #fff;
@@ -195,7 +263,7 @@ h1 {
   font-size: 1.4rem;
   margin: 0;
   /* 뒤로가기 버튼만큼 오른쪽에 여백을 줘서 제목이 가운데 오게 한다 */
-  padding-right: 40px;
+  padding-right: 44px;
 }
 
 .stat-grid {
@@ -473,21 +541,91 @@ h1 {
 
 /* ---- 소리 켜기/끄기 ---- */
 
-.sound-toggle {
+/* ---- 켜기/끄기 스위치 ---- */
+/* 글자로 "켜짐/꺼짐"을 쓰는 대신 스위치 모양으로 보여준다.
+   지금 켜져 있는지를 읽지 않고 알아볼 수 있다. */
+
+.switch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.switch-row {
+  /* 여기에 flex: 1 을 주면 안 된다. .switch-group 이 세로 flex 라서
+     flex-basis 가 0 이 되어 높이가 0 으로 찌그러진다. */
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  margin-bottom: 16px;
-  padding: 12px 0;
+  padding: 12px 14px;
   border: 1px solid #d7ddee;
   border-radius: 12px;
   background: #fff;
-  color: #4c6fff;
-  font-size: 0.9rem;
   font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.sound-toggle.off {
+.switch-icon {
+  flex: none;
+  font-size: 1rem;
+}
+
+.switch-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  color: #1c2333;
+  line-height: 1.35;
+}
+
+.switch-text small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
   color: #9aa2b4;
-  background: #f6f7fa;
+}
+
+/* 스위치 그림. 켜지면 파랗게 바뀌고 동그라미가 오른쪽으로 간다. */
+.switch-track {
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: #d7ddee;
+  transition: background 0.15s ease;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(28, 35, 51, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.switch-row.on .switch-track {
+  background: #4c6fff;
+}
+
+.switch-row.on .switch-knob {
+  transform: translateX(18px);
+}
+
+/* 화면 움직임을 불편해하는 사람에게는 미끄러지는 효과를 뺀다 */
+@media (prefers-reduced-motion: reduce) {
+  .switch-track,
+  .switch-knob,
+  .ring-progress {
+    transition: none;
+  }
 }
 
 /* ---- 잠깐 나갔다 온 것을 봐줬을 때 ---- */
@@ -590,27 +728,18 @@ h1 {
 
 /* ---- 소리 스위치 + 미리 듣기 ---- */
 
-.sound-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.sound-row .sound-toggle {
-  flex: 1;
-  margin-bottom: 0;
-}
-
+/* 미리 듣기. 소리 스위치와 나란히 놓으면 글자가 눌려서 깨지므로
+   아래 줄에 통째로 둔다. */
 .sound-test {
-  flex: none;
+  width: 100%;
   padding: 12px 14px;
-  border: 1px solid #d7ddee;
+  border: 1px dashed #c7d2fe;
   border-radius: 12px;
-  background: #fff;
+  background: #f8faff;
   color: #4c6fff;
   font-size: 0.9rem;
+  font-weight: 600;
   font-family: inherit;
-  white-space: nowrap;
 }
 
 /* ---- 끝났을 때 화면 번쩍임 ---- */
@@ -649,6 +778,14 @@ h1 {
   color: #059669;
 }
 
+#timer-screen.resting .ring-track {
+  stroke: #c7f2df;
+}
+
+#timer-screen.resting .ring-progress {
+  stroke: #059669;
+}
+
 .round-badge {
   display: inline-block;
   margin: 0 auto 12px;
@@ -665,7 +802,51 @@ h1 {
   color: #047857;
 }
 
-/* 오래 자리를 비워 없던 일이 된 판 */
-.countdown.voided {
-  color: #9aa2b4;
+
+/* ---- 집중 중일 때만 어두운 화면 ---- */
+/* 큰 숫자 하나만 보는 화면이라 어두워도 읽기 어렵지 않고, 야자 시간에
+   눈이 덜 부시다. 어두워지는 것 자체가 "시작됐다" 신호도 된다.
+   글을 읽는 화면(기록·게시판)은 밝은 쪽이 잘 읽혀서 그대로 둔다. */
+
+body.focus-mode {
+  background: linear-gradient(180deg, #1c2333 0%, #12172a 100%);
+  color: #fff;
+}
+
+body.focus-mode .countdown {
+  color: #fff;
+}
+
+body.focus-mode .ring-track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* 어두운 배경에서는 #4c6fff 가 가라앉아 보여서 조금 밝은 파랑을 쓴다 */
+body.focus-mode .ring-progress {
+  stroke: #7d97ff;
+}
+
+body.focus-mode .mission-label {
+  color: #fff;
+}
+
+body.focus-mode .running-label {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+body.focus-mode .round-badge {
+  background: rgba(125, 151, 255, 0.16);
+  color: #a8bbff;
+}
+
+body.focus-mode .secondary-btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+body.focus-mode .forgive-note {
+  background: rgba(245, 158, 11, 0.13);
+  border-color: rgba(251, 191, 36, 0.34);
+  color: #fcd34d;
 }
