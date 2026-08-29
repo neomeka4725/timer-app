@@ -18,8 +18,12 @@ const startBtn = document.getElementById("start-btn");
 const statsBtn = document.getElementById("stats-btn");
 const wakelockWarning = document.getElementById("wakelock-warning");
 
+const missionInput = document.getElementById("mission-input");
+const missionLabel = document.getElementById("mission-label");
+
 const runningLabel = document.getElementById("running-label");
 const countdownEl = document.getElementById("countdown");
+const ringProgress = document.getElementById("ring-progress");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
@@ -136,11 +140,16 @@ function releaseWakeLock() {
 let audioCtx = null;
 let soundOn = loadSoundOn();
 
+const soundHint = soundToggle.querySelector("small");
+const soundIcon = soundToggle.querySelector(".switch-icon");
+
 function updateSoundToggle() {
-  soundToggle.textContent = soundOn
-    ? "🔔 끝나면 소리로 알려줘요"
-    : "🔕 소리 꺼짐 (수업 중일 때)";
-  soundToggle.classList.toggle("off", !soundOn);
+  soundToggle.classList.toggle("on", soundOn);
+  soundToggle.setAttribute("aria-pressed", soundOn ? "true" : "false");
+  soundIcon.textContent = soundOn ? "🔔" : "🔕";
+  soundHint.textContent = soundOn
+    ? "수업 중이면 꺼두세요"
+    : "지금은 소리가 안 나요";
 }
 
 function wakeUpAudio() {
@@ -246,11 +255,14 @@ soundTest.addEventListener("click", () => {
 
 // ---- 쉬었다 하기 (뽀모도로) ----
 
+const pomodoroHint = pomodoroToggle.querySelector("small");
+
 function updatePomodoroToggle() {
-  pomodoroToggle.textContent = pomodoroOn
-    ? "🍅 쉬었다 하기 켜짐 (집중 후 5분 휴식)"
-    : "🍅 쉬었다 하기 꺼짐";
-  pomodoroToggle.classList.toggle("off", !pomodoroOn);
+  pomodoroToggle.classList.toggle("on", pomodoroOn);
+  pomodoroToggle.setAttribute("aria-pressed", pomodoroOn ? "true" : "false");
+  pomodoroHint.textContent = pomodoroOn
+    ? "집중이 끝나면 5분 쉬어요"
+    : "목표 시간만 재고 끝나요";
 }
 
 pomodoroToggle.addEventListener("click", () => {
@@ -265,8 +277,11 @@ function startBreak() {
   breakEndTime = Date.now() + BREAK_SECONDS * 1000;
 
   timerScreen.classList.add("resting");
-  countdownEl.classList.remove("failed", "voided");
-  countdownEl.textContent = formatTime(BREAK_SECONDS);
+  countdownEl.classList.remove("failed");
+  renderCountdown(BREAK_SECONDS);
+  setRing(1);
+  // 쉬는 화면은 초록색이라 어두운 집중 화면에서 빠져나온다.
+  setFocusMode(false);
   runningLabel.textContent = "☕ 쉬는 시간이에요. 폰 봐도 괜찮아요";
   forgiveNote.classList.add("hidden");
 
@@ -278,7 +293,8 @@ function startBreak() {
 
   breakTimerId = setInterval(() => {
     const left = Math.max(0, Math.round((breakEndTime - Date.now()) / 1000));
-    countdownEl.textContent = formatTime(left);
+    renderCountdown(left);
+    setRing(left / BREAK_SECONDS);
     if (left <= 0) endBreak();
   }, 250);
 }
@@ -339,11 +355,48 @@ function showScreen(screen) {
   boardScreen.classList.add("hidden");
   rankScreen.classList.add("hidden");
   screen.classList.remove("hidden");
+  // 타이머 화면이 아닌 곳으로 옮기면 어두운 배경은 반드시 풀어준다.
+  // 한 곳에서 정리해두면 나중에 화면을 추가해도 어둡게 남는 일이 없다.
+  if (screen !== timerScreen) setFocusMode(false);
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
   window.scrollTo(0, 0);
 }
 
 // ---- 시간 표시 ----
+
+// ---- 남은 시간 링 ----
+// 숫자를 읽지 않아도 얼마나 남았는지 한눈에 보이게 한다.
+// 원의 둘레만큼 점선을 그려놓고, 남은 비율만큼만 보이게 잘라낸다.
+const RING_RADIUS = 120;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+// left: 남은 비율(0~1). 1이면 꽉 찬 원, 0이면 아무것도 안 보인다.
+function setRing(left, failed) {
+  if (!ringProgress) return;
+  ringProgress.classList.toggle("failed", failed === true);
+  const safe = Math.max(0, Math.min(1, left));
+  ringProgress.style.strokeDasharray = RING_LENGTH;
+  ringProgress.style.strokeDashoffset = RING_LENGTH * (1 - safe);
+}
+
+// 시간을 화면에 쓴다. 초 단위는 흐리게 해서 자꾸 쳐다보지 않게 한다.
+// (폰을 멀리하라는 앱이 화면을 계속 보게 만들면 앞뒤가 안 맞는다)
+function renderCountdown(totalSeconds) {
+  const text = formatTime(totalSeconds);
+  const colon = text.indexOf(":");
+  countdownEl.textContent = text.slice(0, colon);
+  const sec = document.createElement("span");
+  sec.className = "sec";
+  sec.textContent = text.slice(colon);
+  countdownEl.appendChild(sec);
+}
+
+// 집중 중에만 화면을 어둡게 한다.
+// 큰 숫자 하나만 보는 화면이라 어두워도 읽기 어렵지 않고, 야자 시간에 눈이
+// 덜 부시다. 글을 읽는 화면(기록·게시판)은 밝은 쪽이 잘 읽혀서 그대로 둔다.
+function setFocusMode(on) {
+  document.body.classList.toggle("focus-mode", on);
+}
 
 function formatTime(totalSeconds) {
   const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
@@ -407,8 +460,16 @@ function startTimer() {
   // 실제 시계를 기준으로 계산해야 시간이 밀리지 않는다.
   endTime = Date.now() + goalSeconds * 1000;
 
-  countdownEl.textContent = formatTime(remainingSeconds);
-  countdownEl.classList.remove("failed", "voided");
+  renderCountdown(remainingSeconds);
+  countdownEl.classList.remove("failed");
+  setRing(1);
+  setFocusMode(true);
+
+  // 무엇에 집중하는지 적어두면 딴짓하려다 한 번 멈칫하게 된다.
+  const mission = missionInput.value.trim();
+  missionLabel.textContent = mission;
+  missionLabel.classList.toggle("hidden", mission === "");
+
   runningLabel.textContent = "폰을 멀리하고 목표를 지켜보세요";
   cancelBtn.classList.remove("hidden");
   restartBtn.classList.add("hidden");
@@ -427,7 +488,8 @@ function startTimer() {
 
   timerId = setInterval(() => {
     remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
-    countdownEl.textContent = formatTime(remainingSeconds);
+    renderCountdown(remainingSeconds);
+    setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds);
 
     // 화면을 벗어나 있는 동안에는 성공으로 끝내지 않는다.
     // 안 그러면 나갔다 오기만 해도 성공이 되어버린다.
@@ -439,13 +501,20 @@ function startTimer() {
 }
 
 // 타이머를 멈추고 기록을 남기는 공통 처리.
-function stopTimer(result) {
+// awaySeconds: 화면을 벗어나 있던 시간. 실제로 집중한 시간에서 빼야 한다.
+// 예를 들어 60분을 걸고 30분 나가 있다가 돌아오면 시계상으로는 30분이
+// 지났지만 집중한 시간은 0분이다. 이걸 안 빼면 기록에 "30분 집중"이라고
+// 남아서 사실과 달라진다.
+function stopTimer(result, awaySeconds) {
   clearInterval(timerId);
   timerId = null;
   releaseWakeLock();
 
+  const away = Math.round(awaySeconds || 0);
   const elapsedSeconds =
-    result === "success" ? goalSeconds : goalSeconds - remainingSeconds;
+    result === "success"
+      ? goalSeconds
+      : Math.max(0, goalSeconds - remainingSeconds - away);
 
   const record = {
     at: Date.now(),
@@ -472,6 +541,10 @@ function stopTimer(result) {
 
 function finishTimer() {
   stopTimer("success");
+  // 다 채웠으니 링도 꽉 찬 모습으로 둔다.
+  setRing(1);
+  // 번쩍임은 밝은 화면에서 보여야 자연스러우므로 먼저 어둠을 푼다.
+  setFocusMode(false);
   alertFinished();
 
   // 성공했을 때만 게시판에 자랑할 수 있게 한다.
@@ -483,6 +556,7 @@ function finishTimer() {
   shareBox.classList.remove("hidden");
 
   if (pomodoroOn) {
+    // startBreak() 안에서 쉬는 화면(초록)으로 바꾼다.
     startBreak();
   } else {
     phase = "idle";
@@ -490,41 +564,24 @@ function finishTimer() {
   }
 }
 
-function failTimer() {
+function failTimer(awaySeconds) {
   phase = "idle";
   timerScreen.classList.remove("resting");
-  stopTimer("left");
+  setFocusMode(false);
+  stopTimer("left", awaySeconds);
   runningLabel.textContent = "😢 화면을 벗어나서 실패했어요";
   countdownEl.classList.add("failed");
-}
-
-// 오래 자리를 비웠을 때. 기록을 남기지 않고 그냥 없던 일로 한다.
-function voidTimer() {
-  phase = "idle";
-  clearInterval(timerId);
-  timerId = null;
-  releaseWakeLock();
-
-  timerScreen.classList.remove("resting");
-  countdownEl.classList.remove("failed");
-  countdownEl.classList.add("voided");
-  runningLabel.textContent = "🕘 오래 자리를 비워서 이 판은 없던 일로 했어요";
-  forgiveNote.classList.add("hidden");
-  roundBadge.classList.add("hidden");
-
-  cancelBtn.classList.add("hidden");
-  shareBox.classList.add("hidden");
-  nextFocusBtn.classList.add("hidden");
-  stopPomoBtn.classList.add("hidden");
-  restartBtn.classList.remove("hidden");
+  setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds, true);
 }
 
 function giveUpTimer() {
   phase = "idle";
   timerScreen.classList.remove("resting");
+  setFocusMode(false);
   stopTimer("gaveup");
   runningLabel.textContent = "🏳️ 포기했어요";
   countdownEl.classList.add("failed");
+  setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds, true);
 }
 
 // ---- 화면을 벗어났을 때 ----
@@ -533,11 +590,6 @@ function giveUpTimer() {
 
 const FORGIVE_SECONDS = 5;
 const FORGIVE_LIMIT = 3;
-
-// 이만큼 넘게 자리를 비우면 실패가 아니라 "없던 일"로 한다.
-// 밥 먹으러 가거나 수업이 시작돼서 앱을 떠난 경우인데, 한참 뒤에 돌아와서
-// "실패했어요"를 보는 건 이상하다. 그 판은 흐지부지된 것이지 실패가 아니다.
-const CANCEL_SECONDS = 5 * 60;
 
 let leftAt = 0; // 화면을 벗어난 시각
 let forgiveCount = 0; // 이번 판에서 봐준 횟수
@@ -575,13 +627,9 @@ document.addEventListener("visibilitychange", () => {
     return;
   }
 
-  // 아주 오래 비웠으면 실패가 아니라 없던 일로 한다.
-  if (awaySeconds > CANCEL_SECONDS) {
-    voidTimer();
-    return;
-  }
-
-  failTimer();
+  // 그 밖에는 얼마를 나가 있었든 실패다.
+  // 오래 비운 쪽을 봐주면 "실패를 지우려고 일부러 안 돌아오는" 길이 열린다.
+  failTimer(awaySeconds);
 });
 
 // ---- 내 기록 화면 ----
