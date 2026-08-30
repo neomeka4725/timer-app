@@ -182,15 +182,28 @@ function wakeUpAudio() {
 let liveSounds = [];
 
 function stopChime() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
   liveSounds.forEach((node) => {
+    // 1) 먼저 소리 크기를 0으로 못박는다. 예약해둔 오르내림도 지운다.
+    //    osc.stop() 만 부르면 "아직 시작 전인" 소리가 남아서 울리는 일이
+    //    있는데, 크기를 0으로 만들면 무엇이 남아 있든 들리지 않는다.
     try {
-      node.osc.stop();
+      node.gain.gain.cancelScheduledValues(now);
+      node.gain.gain.setValueAtTime(0, now);
+    } catch (err) {
+      // 값을 못 바꿔도 아래에서 끊어버린다.
+    }
+    // 2) 오실레이터를 멈추고
+    try {
+      node.osc.stop(now);
     } catch (err) {
       // 이미 끝난 소리는 멈출 게 없다.
     }
+    // 3) 스피커에서 아예 떼어낸다. 여기까지 하면 확실히 조용해진다.
     try {
-      node.osc.disconnect();
       node.gain.disconnect();
+      node.osc.disconnect();
     } catch (err) {
       // 이미 끊긴 것도 있다.
     }
@@ -263,13 +276,16 @@ soundToggle.addEventListener("click", () => {
   soundOn = !soundOn;
   saveSoundOn(soundOn);
   updateSoundToggle();
-  // 끄면 지금 울리는 소리도 바로 멈춘다.
-  if (!soundOn) stopChime();
-  if (soundOn) {
-    // 켜자마자 어떤 소리인지 들려준다.
-    wakeUpAudio();
-    playChime();
-  }
+
+  // 스위치를 누르면 어느 쪽이든 소리를 멈춘다.
+  // 켤 때 소리를 들려주면, 껐다 켰다 하는 동안 계속 삐- 소리가 나서
+  // "껐는데도 소리가 난다"처럼 느껴진다. 스위치는 조용해야 한다.
+  // 들어보고 싶으면 바로 아래 "미리 듣기"가 있다.
+  stopChime();
+
+  // 켤 때는 소리 장치만 깨워 둔다.
+  // iOS는 버튼을 누른 그 순간이 아니면 소리 장치를 못 깨운다.
+  if (soundOn) wakeUpAudio();
 });
 
 // 미리 듣기: 지금 기기 음량으로 실제로 들리는지 확인할 수 있게 한다.

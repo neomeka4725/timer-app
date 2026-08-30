@@ -62,14 +62,14 @@
 `index.html` 맨 위와 맨 아래에 이렇게 되어 있다.
 
 ```html
-<link rel="stylesheet" href="style.css?v=24" />
-<script src="storage.js?v=24"></script>
-<script src="cloud.js?v=24"></script>
-<script src="script.js?v=24"></script>
+<link rel="stylesheet" href="style.css?v=25" />
+<script src="storage.js?v=25"></script>
+<script src="cloud.js?v=25"></script>
+<script src="script.js?v=25"></script>
 ```
 
-`?v=24`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
-**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=25`).
+`?v=25`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
+**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=26`).
 
 안 올리면 어떻게 되나: 사파리가 예전 `script.js`를 그대로 쓴다. 새 버튼은
 화면에 보이는데 눌러도 아무 반응이 없다. 원인을 찾기 매우 어렵다.
@@ -196,6 +196,7 @@ GitHub Pages에 올린 뒤 확인하는 편이 확실하다.
 - [ ] 오래 나갔다 와도 실패로 남는지 (없던 일로 사라지면 안 된다)
 - [ ] 패드에서 두 칸으로 보이는지, 화면을 나누면 폰 배치로 돌아오는지
 - [ ] 화면을 나눈 채로 시작이 막히는지 (쉬는 시간 뒤 "바로 집중 시작"도)
+- [ ] 소리 스위치는 켜도 꺼도 소리를 내지 않는지 (들어보는 건 "미리 듣기")
 - [ ] 소리를 끄면 울리던 소리가 바로 멈추는지
 - [ ] (기기에서) 스위치를 연달아 눌러도 글자가 파랗게 선택되지 않는지
 - [ ] 내 기록에 결과가 쌓이는지
