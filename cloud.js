@@ -16,6 +16,11 @@ const FIRESTORE_BASE =
 // 쓸 수 없다. (Firebase 콘솔에서 주인이 직접 지울 수는 있다)
 const COL_RECORDS = "records_v2";
 const COL_POSTS = "posts_v2";
+// 지금 집중 중인 사람 (도전이 끝나면 지운다)
+const COL_CHALLENGES = "activeChallenges";
+// 도전자에게 보내는 응원. 숫자를 고치는 대신 문서를 하나씩 쌓아서 센다.
+// (게시판 응원과 같은 방식이다. 이렇게 하면 수정 권한이 필요 없다)
+const COL_CHEERS = "challengeCheers";
 
 // 통신이 오래 걸리면 앱이 멈춘 것처럼 보이므로 시간 제한을 둔다.
 const TIMEOUT_MS = 8000;
@@ -102,6 +107,126 @@ async function postDoc(path, fields) {
     throw new Error("저장 실패 (" + res.status + ")");
   }
   return res.json();
+}
+
+// ---- 지금 도전 중 ----
+//
+// 문서 번호를 닉네임으로 쓴다. 그래야 한 사람이 여러 개 올라가지 않는다.
+// 앱이 갑자기 꺼져서 옛 문서가 남아 있을 수 있으므로 새로 시작할 때
+// 먼저 지우고 만든다.
+//
+// 주의: 이 기능은 Firebase 규칙에 activeChallenges 의 create/delete 허용이
+// 있어야 동작한다. 규칙이 없으면 403이 나는데, 그때도 타이머 자체는
+// 그대로 돌아가야 하므로 부르는 쪽에서 실패를 무시한다.
+
+async function cloudEndChallenge(nickname) {
+  const res = await fetchWithTimeout(
+    FIRESTORE_BASE + "/" + COL_CHALLENGES + "/" + encodeURIComponent(nickname) +
+      "?key=" + FIREBASE_KEY,
+    { method: "DELETE" }
+  );
+  // 404는 이미 없다는 뜻이라 성공으로 본다.
+  if (!res.ok && res.status !== 404) {
+    throw makeError("도전 끝내기 실패", res.status);
+  }
+  return true;
+}
+
+async function cloudStartChallenge(challenge) {
+  // 남아 있던 옛 도전을 먼저 치운다. 없으면 그냥 넘어간다.
+  try {
+    await cloudEndChallenge(challenge.nickname);
+  } catch (err) {
+    // 못 지워도 아래에서 만들어 본다.
+  }
+  const res = await fetchWithTimeout(
+    FIRESTORE_BASE + "/" + COL_CHALLENGES + "?documentId=" +
+      encodeURIComponent(challenge.nickname) + "&key=" + FIREBASE_KEY,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          nickname: { stringValue: challenge.nickname },
+          mission: { stringValue: challenge.mission || "" },
+          goalMinutes: { integerValue: String(Math.round(challenge.goalMinutes)) },
+          startedAt: { timestampValue: new Date(challenge.startedAt).toISOString() },
+          endAt: { timestampValue: new Date(challenge.endAt).toISOString() },
+        },
+      }),
+    }
+  );
+  if (!res.ok) throw makeError("도전 올리기 실패", res.status);
+  return true;
+}
+
+// 지금 도전 중인 사람들을 가져온다.
+// 끝날 시각이 지난 것은 빼고 보여주고, 조용히 지워둔다.
+// (앱을 그냥 닫아버리면 문서가 남는데, 그러면 계속 집중 중인 것처럼 보인다)
+async function cloudLoadChallenges() {
+  const docs = await runQuery({
+    structuredQuery: {
+      from: [{ collectionId: COL_CHALLENGES }],
+      limit: 50,
+    },
+  });
+
+  const now = Date.now();
+  const live = [];
+  const stale = [];
+
+  docs.forEach((d) => {
+    const f = d.fields;
+    const item = {
+      id: docId(d.name),
+      nickname: f.nickname.stringValue,
+      mission: f.mission ? f.mission.stringValue : "",
+      goalMinutes: Number(f.goalMinutes.integerValue),
+      startedAt: new Date(f.startedAt.timestampValue).getTime(),
+      endAt: new Date(f.endAt.timestampValue).getTime(),
+    };
+    // 응원을 붙일 때 쓰는 열쇠. 판마다 달라야 지난 판의 응원이 안 따라온다.
+    item.challengeId = item.nickname + "|" + item.startedAt;
+    if (item.endAt > now) live.push(item);
+    else stale.push(item);
+  });
+
+  // 지난 것 치우기는 덤이다. 실패해도 화면에는 이미 안 보인다.
+  stale.forEach((item) => {
+    cloudEndChallenge(item.nickname).catch(() => {});
+  });
+
+  live.sort((a, b) => a.endAt - b.endAt);
+  return live;
+}
+
+// ---- 도전자 응원 ----
+
+async function cloudCheerChallenge(challengeId, from) {
+  await postDoc("/" + COL_CHEERS, {
+    challengeId: { stringValue: challengeId },
+    from: { stringValue: from },
+    at: { timestampValue: new Date().toISOString() },
+  });
+  return true;
+}
+
+// 최근 응원을 한 번에 가져와서 도전별로 센다.
+// 도전마다 따로 물어보면 사람 수만큼 요청이 늘어난다.
+async function cloudLoadChallengeCheers() {
+  const docs = await runQuery({
+    structuredQuery: {
+      from: [{ collectionId: COL_CHEERS }],
+      orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }],
+      limit: 200,
+    },
+  });
+  const counts = {};
+  docs.forEach((d) => {
+    const key = d.fields.challengeId.stringValue;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return counts;
 }
 
 // ---- 게시판 ----

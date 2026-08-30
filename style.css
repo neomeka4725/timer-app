@@ -965,6 +965,144 @@ body.focus-mode .ring-sub {
   color: rgba(255, 255, 255, 0.42);
 }
 
+/* ---- 티어 ---- */
+/* 기존 카드와 같은 값(테두리 #e5e9f2, 반경 14px)을 쓴다. */
+
+.tier-box {
+  padding: 16px;
+  margin-bottom: 28px;
+  border: 1px solid #e5e9f2;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+}
+
+.tier-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tier-badge {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1c2333;
+}
+
+.tier-tokens {
+  margin-left: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4c6fff;
+}
+
+.tier-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #eef0f6;
+  overflow: hidden;
+}
+
+.tier-bar-fill {
+  height: 8px;
+  border-radius: 999px;
+  background: #4c6fff;
+  width: 0;
+  transition: width 0.3s ease;
+}
+
+.tier-next {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: #8a93a6;
+}
+
+/* ---- 지금 도전 중 ---- */
+
+.live-card {
+  text-align: left;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e9f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.live-card.mine {
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.live-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.live-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.live-tier {
+  font-size: 0.78rem;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.live-mission {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: #1c2333;
+  overflow-wrap: anywhere;
+}
+
+.live-time {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.live-time b {
+  color: #4c6fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-count {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.live-cheer {
+  margin-left: auto;
+  flex: none;
+  padding: 9px 16px;
+  border: 1px solid #d7ddee;
+  border-radius: 999px;
+  background: #fff;
+  color: #4c6fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.live-cheer:disabled {
+  color: #9aa2b4;
+  background: #f6f7fa;
+  border-color: #e5e9f2;
+}
+
 /* ---- 패드처럼 넓은 화면 ---- */
 /* 폭이 700px를 넘을 때만 바뀐다. 화면을 반으로 나눠 쓰면 창이 좁아져서
    저절로 폰 배치로 돌아온다 (기기가 아니라 창 크기를 재기 때문이다). */
@@ -1088,13 +1226,15 @@ body.focus-mode .ring-sub {
     padding: 15px 4px;
   }
 
-  /* 게시판: 두 단으로 흘린다. 글이 짧아서 한 단이면 자리가 남는다. */
-  #board-list {
+  /* 게시판·도전 목록: 두 단으로 흘린다. 한 단이면 자리가 남는다. */
+  #board-list,
+  #live-list {
     column-count: 2;
     column-gap: 20px;
   }
 
-  .post {
+  .post,
+  .live-card {
     break-inside: avoid;
   }
 

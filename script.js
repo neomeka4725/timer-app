@@ -66,6 +66,17 @@ const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
 const clearBtn = document.getElementById("clear-btn");
+
+const tierBadge = document.getElementById("tier-badge");
+const tierTokens = document.getElementById("tier-tokens");
+const tierBarFill = document.getElementById("tier-bar-fill");
+const tierNext = document.getElementById("tier-next");
+
+const liveScreen = document.getElementById("live-screen");
+const liveBtn = document.getElementById("live-btn");
+const liveStatus = document.getElementById("live-status");
+const liveList = document.getElementById("live-list");
+const liveRefresh = document.getElementById("live-refresh");
 const splitWarning = document.getElementById("split-warning");
 const splitNumbers = document.getElementById("split-numbers");
 
@@ -416,10 +427,13 @@ function showScreen(screen) {
   statsScreen.classList.add("hidden");
   boardScreen.classList.add("hidden");
   rankScreen.classList.add("hidden");
+  liveScreen.classList.add("hidden");
   screen.classList.remove("hidden");
   // 타이머 화면이 아닌 곳으로 옮기면 어두운 배경은 반드시 풀어준다.
   // 한 곳에서 정리해두면 나중에 화면을 추가해도 어둡게 남는 일이 없다.
   if (screen !== timerScreen) setFocusMode(false);
+  // 도전 중 화면을 떠나면 1초마다 도는 시계를 멈춘다.
+  if (screen !== liveScreen) stopLiveTicker();
   // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
   if (screen === setupScreen) updateSplitWarning();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
@@ -566,6 +580,8 @@ function startTimer() {
   forgiveNote.classList.add("hidden");
 
   showScreen(timerScreen);
+  // 지금 도전 중 목록에 올린다. 실패해도 타이머는 그대로 돈다.
+  beginChallenge();
   requestWakeLock();
   // 버튼을 누른 지금이 소리 장치를 깨울 수 있는 유일한 순간이다.
   wakeUpAudio();
@@ -593,6 +609,8 @@ function stopTimer(result, awaySeconds) {
   clearInterval(timerId);
   timerId = null;
   releaseWakeLock();
+  // 성공·실패·포기·화면 이탈이 모두 여기를 지나므로 한 곳에서 내린다.
+  endChallenge();
 
   const away = Math.round(awaySeconds || 0);
   const elapsedSeconds =
@@ -842,6 +860,9 @@ async function renderStats() {
   const result = await collectRecords(nickname);
   const records = result.records;
 
+  // 토큰은 저장하지 않고 기록에서 계산한다.
+  renderTierInfo(calculateTokens(records));
+
   if (result.online) {
     syncStatus.textContent = "☁️ 모든 기기의 기록을 합쳐서 보여주고 있어요";
   } else {
@@ -896,6 +917,239 @@ window.addEventListener("beforeunload", (event) => {
   // 옛날 브라우저는 이 값을 봐야 경고를 띄운다.
   event.returnValue = "";
 });
+
+// ---- 티어 ----
+// 토큰은 저장하지 않는다. 화면을 열 때마다 기록에서 다시 계산한다.
+
+function renderTierInfo(tokens) {
+  const info = computeTierFromTokens(tokens);
+
+  tierBadge.textContent = info.tier.emoji + " " + info.tier.name;
+  tierTokens.textContent = info.tokens + " 토큰";
+  tierBarFill.style.width = info.progress + "%";
+
+  if (info.isMax) {
+    tierNext.textContent = "🎉 최고 티어 달성";
+  } else {
+    tierNext.textContent =
+      "다음 " + info.nextTier.name + "까지 " + info.needed + " 토큰";
+  }
+  return info;
+}
+
+// ---- 지금 도전 중 ----
+//
+// 타이머를 시작하면 activeChallenges 에 올리고, 끝나면 지운다.
+// 인터넷이 안 되거나 Firebase 규칙이 아직 없어도 타이머 자체는 그대로
+// 돌아가야 하므로 실패는 조용히 넘긴다.
+
+let liveTickerId = null;
+let liveItems = [];
+let liveCheers = {};
+// 닉네임 -> 티어 이름. 순위표에 쓰는 자료를 그대로 재활용한다.
+// 순위표의 누적 시간은 성공한 판만 더한 값이라, 분으로 바꾸면 토큰과 같다.
+let liveTiers = {};
+
+async function loadLiveTiers() {
+  try {
+    const rows = await cloudLoadRanking();
+    const map = {};
+    rows.forEach((row) => {
+      const tokens = Math.round(row.totalSeconds / 60);
+      const info = computeTierFromTokens(tokens);
+      map[row.nickname] = info.tier.emoji + " " + info.tier.name;
+    });
+    liveTiers = map;
+  } catch (err) {
+    // 티어를 못 가져와도 도전 목록은 보여준다.
+    liveTiers = {};
+  }
+}
+
+function beginChallenge() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+  cloudStartChallenge({
+    nickname: nickname,
+    mission: missionInput.value.trim().slice(0, 20),
+    goalMinutes: Math.round(goalSeconds / 60),
+    startedAt: Date.now(),
+    endAt: endTime,
+  }).catch(() => {});
+}
+
+function endChallenge() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+  cloudEndChallenge(nickname).catch(() => {});
+}
+
+function stopLiveTicker() {
+  if (liveTickerId !== null) {
+    clearInterval(liveTickerId);
+    liveTickerId = null;
+  }
+}
+
+// 남은 시간을 "17분 32초" 처럼 짧게 적는다.
+function shortLeft(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  if (m === 0) return sec + "초 남음";
+  return m + "분 남음";
+}
+
+async function loadLive() {
+  liveStatus.textContent = "불러오는 중…";
+  liveStatus.classList.remove("offline");
+  try {
+    const [items, cheers] = await Promise.all([
+      cloudLoadChallenges(),
+      cloudLoadChallengeCheers().catch(() => ({})),
+    ]);
+    liveItems = items;
+    liveCheers = cheers;
+  } catch (err) {
+    liveItems = [];
+    liveStatus.classList.add("offline");
+    liveStatus.textContent =
+      err.status === 403
+        ? "⚠️ 앱 설정이 아직 끝나지 않았어요. 만든 사람에게 알려주세요."
+        : "⚠️ 인터넷에 연결되지 않아 볼 수 없어요.";
+    liveList.textContent = "";
+    return;
+  }
+  renderLive();
+  startLiveTicker();
+}
+
+function startLiveTicker() {
+  stopLiveTicker();
+  // 남은 시간만 1초마다 다시 적는다. 목록을 다시 그리지는 않는다.
+  liveTickerId = setInterval(() => {
+    const now = Date.now();
+    let changed = false;
+    liveItems.forEach((item) => {
+      if (item.endAt <= now) changed = true;
+      const el = document.getElementById("left-" + item.challengeId);
+      if (el) el.textContent = shortLeft(item.endAt - now);
+    });
+    // 끝난 사람이 생기면 목록을 다시 그린다.
+    if (changed) {
+      liveItems = liveItems.filter((i) => i.endAt > now);
+      renderLive();
+    }
+  }, 1000);
+}
+
+function renderLive() {
+  liveList.textContent = "";
+
+  const me = loadNickname();
+  liveStatus.textContent = "현재 " + liveItems.length + "명이 집중 중";
+
+  if (liveItems.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "notice";
+    empty.textContent =
+      "지금 집중 중인 사람이 없어요. 먼저 시작해서 1등이 되어 보세요!";
+    liveList.appendChild(empty);
+    return;
+  }
+
+  liveItems.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "live-card";
+    if (item.nickname === me) card.classList.add("mine");
+
+    const head = document.createElement("div");
+    head.className = "live-head";
+    const name = document.createElement("span");
+    name.className = "live-name";
+    name.textContent = item.nickname;
+    head.appendChild(name);
+
+    // 티어는 순위표에서 이미 계산한 값을 쓴다. 없으면 비워둔다.
+    const tierName = liveTiers[item.nickname];
+    if (tierName) {
+      const badge = document.createElement("span");
+      badge.className = "live-tier";
+      badge.textContent = tierName;
+      head.appendChild(badge);
+    }
+    card.appendChild(head);
+
+    if (item.mission) {
+      const mission = document.createElement("p");
+      mission.className = "live-mission";
+      mission.textContent = item.mission;
+      card.appendChild(mission);
+    }
+
+    const time = document.createElement("p");
+    time.className = "live-time";
+    const goal = document.createElement("span");
+    goal.textContent = item.goalMinutes + "분 도전 · ";
+    const left = document.createElement("b");
+    left.id = "left-" + item.challengeId;
+    left.textContent = shortLeft(item.endAt - Date.now());
+    time.appendChild(goal);
+    time.appendChild(left);
+    card.appendChild(time);
+
+    const row = document.createElement("div");
+    row.className = "live-foot";
+
+    const count = document.createElement("span");
+    count.className = "live-count";
+    count.textContent = "👏 " + (liveCheers[item.challengeId] || 0);
+    row.appendChild(count);
+
+    if (item.nickname !== me) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "live-cheer";
+      if (alreadyCheered(item.challengeId)) {
+        btn.textContent = "응원함";
+        btn.disabled = true;
+      } else {
+        btn.textContent = "👏 응원하기";
+        btn.addEventListener("click", () => sendChallengeCheer(item, btn, count));
+      }
+      row.appendChild(btn);
+    }
+
+    card.appendChild(row);
+    liveList.appendChild(card);
+  });
+}
+
+async function sendChallengeCheer(item, btn, countEl) {
+  btn.disabled = true;
+  btn.textContent = "보내는 중…";
+  try {
+    await cloudCheerChallenge(item.challengeId, loadNickname());
+    markCheered(item.challengeId);
+    liveCheers[item.challengeId] = (liveCheers[item.challengeId] || 0) + 1;
+    countEl.textContent = "👏 " + liveCheers[item.challengeId];
+    btn.textContent = "응원함";
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "👏 응원하기";
+    liveStatus.textContent = "⚠️ 응원을 보내지 못했어요.";
+  }
+}
+
+liveBtn.addEventListener("click", () => {
+  showScreen(liveScreen);
+  loadLiveTiers();
+  loadLive();
+});
+
+liveRefresh.addEventListener("click", loadLive);
+document.getElementById("live-back").addEventListener("click", () => showScreen(setupScreen));
+document.getElementById("live-back-bottom").addEventListener("click", () => showScreen(setupScreen));
 
 // ---- 게시판 ----
 

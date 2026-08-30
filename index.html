@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=25 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=26 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=25" />
+  <link rel="manifest" href="manifest.json?v=26" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=25" />
+  <link rel="stylesheet" href="style.css?v=26" />
 </head>
 <body>
 
@@ -192,6 +192,7 @@
 
     <div class="nav-row">
       <button type="button" id="stats-btn" class="text-btn">📊<br />내 기록</button>
+      <button type="button" id="live-btn" class="text-btn">🔥<br />도전 중</button>
       <button type="button" id="board-btn" class="text-btn">💬<span class="dot hidden" id="board-dot"></span><br />게시판</button>
       <button type="button" id="rank-btn" class="text-btn">🏆<br />순위표</button>
     </div>
@@ -274,6 +275,16 @@
     </div>
     <div class="pad-col">
 
+    <!-- 티어. 토큰은 저장하지 않고 기록에서 계산한다. -->
+    <div class="tier-box" id="tier-box">
+      <div class="tier-head">
+        <span class="tier-badge" id="tier-badge"></span>
+        <span class="tier-tokens" id="tier-tokens"></span>
+      </div>
+      <div class="tier-bar"><div class="tier-bar-fill" id="tier-bar-fill"></div></div>
+      <p class="tier-next" id="tier-next"></p>
+    </div>
+
     <h3 class="list-title">최근 기록</h3>
     <p class="notice" id="record-empty">
       아직 기록이 없어요. 타이머를 끝까지 해보면 여기에 쌓입니다.
@@ -302,6 +313,20 @@
     <button type="button" id="board-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
+  <!-- 화면 6: 지금 도전 중 -->
+  <section id="live-screen" class="screen hidden">
+    <div class="screen-header">
+      <button type="button" id="live-back" class="back-btn" aria-label="돌아가기">←</button>
+      <h2 class="screen-title">🔥 지금 도전 중</h2>
+    </div>
+
+    <p class="sync-status" id="live-status">불러오는 중…</p>
+    <div id="live-list"></div>
+
+    <button type="button" id="live-refresh" class="text-btn">🔄 새로고침</button>
+    <button type="button" id="live-back-bottom" class="primary-btn">돌아가기</button>
+  </section>
+
   <!-- 화면 5: 순위표 -->
   <section id="rank-screen" class="screen hidden">
     <div class="screen-header">
@@ -320,8 +345,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=25"></script>
-  <script src="cloud.js?v=25"></script>
-  <script src="script.js?v=25"></script>
+  <script src="storage.js?v=26"></script>
+  <script src="cloud.js?v=26"></script>
+  <script src="script.js?v=26"></script>
 </body>
 </html>
