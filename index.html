@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=21 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=22 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=21" />
+  <link rel="manifest" href="manifest.json?v=22" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=21" />
+  <link rel="stylesheet" href="style.css?v=22" />
 </head>
 <body>
 
@@ -74,6 +74,11 @@
     <h1>📵 디지털 웰빙 타이머</h1>
     <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
 
+    <!-- 패드처럼 넓은 화면에서만 두 칸으로 갈라진다.
+         폰에서는 .pad-col 이 display:contents 라서 없는 것처럼 지나간다. -->
+    <div class="pad-cols">
+    <div class="pad-col">
+
     <div class="time-display">
       <span id="minutes-value">10</span><span class="unit">분</span>
     </div>
@@ -114,6 +119,9 @@
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
     </p>
+
+    </div>
+    <div class="pad-col">
 
     <div class="switch-group">
       <button type="button" id="pomodoro-toggle" class="switch-row" aria-pressed="false">
@@ -168,6 +176,16 @@
         기록은 그대로 따라옵니다.
       </p>
     </details>
+
+    <p class="notice warning hidden" id="split-warning">
+      🪟 지금 <b>화면을 나눠 쓰고 있어요.</b><br />
+      이러면 옆에서 다른 앱을 봐도 이 앱은 알아채지 못해요.
+      <b>전체화면</b>으로 바꾼 뒤에 시작해 주세요.
+      <span class="split-numbers" id="split-numbers"></span>
+    </p>
+
+    </div>
+    </div>
 
     <div class="nav-row">
       <button type="button" id="stats-btn" class="text-btn">📊<br />내 기록</button>
@@ -226,6 +244,9 @@
       <h2 class="screen-title">📊 <span id="stats-name"></span>님의 기록</h2>
     </div>
 
+    <div class="pad-cols stats-cols">
+    <div class="pad-col">
+
     <div class="stat-grid">
       <div class="stat">
         <span class="stat-value" id="stat-success">0</span>
@@ -247,11 +268,17 @@
       누적 집중 시간 <b id="stat-total">0분</b>
     </div>
 
+    </div>
+    <div class="pad-col">
+
     <h3 class="list-title">최근 기록</h3>
     <p class="notice" id="record-empty">
       아직 기록이 없어요. 타이머를 끝까지 해보면 여기에 쌓입니다.
     </p>
     <ul class="record-list" id="record-list"></ul>
+
+    </div>
+    </div>
 
     <button type="button" id="stats-back-btn" class="primary-btn">돌아가기</button>
     <button type="button" id="rename-btn" class="text-btn">✏️ 닉네임 바꾸기</button>
@@ -290,8 +317,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=21"></script>
-  <script src="cloud.js?v=21"></script>
-  <script src="script.js?v=21"></script>
+  <script src="storage.js?v=22"></script>
+  <script src="cloud.js?v=22"></script>
+  <script src="script.js?v=22"></script>
 </body>
 </html>
