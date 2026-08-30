@@ -3,6 +3,7 @@ const nicknameInput = document.getElementById("nickname-input");
 const pinInput = document.getElementById("pin-input");
 const nicknameError = document.getElementById("nickname-error");
 const nicknameSaveBtn = document.getElementById("nickname-save-btn");
+const nicknameCancelBtn = document.getElementById("nickname-cancel-btn");
 const greetingName = document.getElementById("greeting-name");
 const statsName = document.getElementById("stats-name");
 const renameBtn = document.getElementById("rename-btn");
@@ -176,8 +177,32 @@ function wakeUpAudio() {
 //  - 멜로디보다 반복되는 삐- 소리가 훨씬 잘 들린다
 //  - 삼각파는 사인파보다 배음이 많아 같은 크기에서도 또렷하다
 //  - 한 번 울리고 마는 대신 3세트를 반복해 놓칠 확률을 줄인다
+// 지금 울리고 있는(또는 울릴 예정인) 소리를 들고 있는다.
+// 예약만 해두고 놓아버리면 소리를 꺼도 이미 예약된 것이 그대로 울린다.
+let liveSounds = [];
+
+function stopChime() {
+  liveSounds.forEach((node) => {
+    try {
+      node.osc.stop();
+    } catch (err) {
+      // 이미 끝난 소리는 멈출 게 없다.
+    }
+    try {
+      node.osc.disconnect();
+      node.gain.disconnect();
+    } catch (err) {
+      // 이미 끊긴 것도 있다.
+    }
+  });
+  liveSounds = [];
+}
+
 function playChime() {
   if (!soundOn || !audioCtx) return;
+  // 앞 소리가 아직 울리는 중이면 멈추고 새로 울린다.
+  // 안 그러면 미리 듣기를 연달아 누를 때마다 소리가 겹쳐 쌓인다.
+  stopChime();
   try {
     const beeps = [];
     for (let set = 0; set < 3; set++) {
@@ -201,6 +226,7 @@ function playChime() {
       gain.connect(audioCtx.destination);
       osc.start(start);
       osc.stop(start + 0.21);
+      liveSounds.push({ osc: osc, gain: gain });
     });
   } catch (err) {
     // 소리가 안 나도 타이머는 그대로 동작해야 한다.
@@ -237,6 +263,8 @@ soundToggle.addEventListener("click", () => {
   soundOn = !soundOn;
   saveSoundOn(soundOn);
   updateSoundToggle();
+  // 끄면 지금 울리는 소리도 바로 멈춘다.
+  if (!soundOn) stopChime();
   if (soundOn) {
     // 켜자마자 어떤 소리인지 들려준다.
     wakeUpAudio();
@@ -312,6 +340,11 @@ function endBreak() {
   phase = "breakDone";
 
   runningLabel.textContent = "쉬는 시간 끝! 준비되면 눌러주세요";
+  // 00:00 에 "쉬고 오세요"가 그대로 남아 있으면 아직 쉬는 중처럼 보인다.
+  // 다음 판이 몇 분짜리인지 미리 보여준다.
+  renderCountdown(goalSeconds);
+  setRing(1);
+  setRingSub("다음 집중");
   nextFocusBtn.textContent = "▶️ 집중 시작";
   // 화면은 이미 초록색이라 번쩍임 대신 소리와 진동으로만 알린다.
   playChime();
@@ -328,6 +361,14 @@ function stopPomodoro() {
 }
 
 nextFocusBtn.addEventListener("click", () => {
+  // 시작하기 버튼에만 막이 있으면, 쉬는 동안 화면을 나눠놓고 여기로
+  // 들어오는 길이 열린다. 설정 화면의 안내는 지금 안 보이므로
+  // 타이머 화면 문구로 알려준다.
+  if (splitViewInfo().split) {
+    runningLabel.textContent =
+      "🪟 화면을 나눠 쓰는 중이에요. 전체화면으로 바꾼 뒤 눌러주세요";
+    return;
+  }
   clearInterval(breakTimerId);
   breakTimerId = null;
   startTimer();
@@ -451,6 +492,10 @@ function formatDate(ms) {
 
 function startTimer() {
   // 쉬는 시간에서 이어서 시작한 것이면 회차를 하나 올리고,
+  // 이미 집중 중이면 아무것도 하지 않는다. 버튼을 겹쳐 누르면 회차가
+  // 1로 되돌아가거나 시간이 다시 채워지는 일이 생긴다.
+  if (phase === "focus") return;
+
   // 그냥 새로 시작한 것이면 1회차부터 센다.
   roundNo = phase === "break" || phase === "breakDone" ? roundNo + 1 : 1;
   phase = "focus";
@@ -1186,8 +1231,15 @@ function askNickname() {
   nicknameError.classList.add("hidden");
   nicknameSaveBtn.disabled = false;
   nicknameSaveBtn.textContent = "시작하기";
+  // 이미 닉네임이 있는 사람이 잘못 눌렀을 수도 있다. 그때는 그냥
+  // 빠져나갈 수 있어야 한다. 처음 들어온 사람은 돌아갈 곳이 없으므로 숨긴다.
+  nicknameCancelBtn.classList.toggle("hidden", loadNickname() === "");
   showScreen(nicknameScreen);
 }
+
+nicknameCancelBtn.addEventListener("click", () => {
+  showScreen(setupScreen);
+});
 
 function showNicknameError(message) {
   nicknameError.textContent = message;
