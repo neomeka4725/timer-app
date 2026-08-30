@@ -65,6 +65,8 @@ const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
 const clearBtn = document.getElementById("clear-btn");
+const splitWarning = document.getElementById("split-warning");
+const splitNumbers = document.getElementById("split-numbers");
 
 let timerId = null;
 let lastRecord = null; // 방금 끝낸 판 (게시판에 올릴 때 쓴다)
@@ -361,6 +363,8 @@ function showScreen(screen) {
   // 타이머 화면이 아닌 곳으로 옮기면 어두운 배경은 반드시 풀어준다.
   // 한 곳에서 정리해두면 나중에 화면을 추가해도 어둡게 남는 일이 없다.
   if (screen !== timerScreen) setFocusMode(false);
+  // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
+  if (screen === setupScreen) updateSplitWarning();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
   window.scrollTo(0, 0);
 }
@@ -615,6 +619,67 @@ function giveUpTimer() {
   setFocusMode(false);
   stopTimer("gaveup");
   runningLabel.textContent = "🏳️ 포기했어요";
+  showResultProgress();
+}
+
+// ---- 화면 나눠쓰기(Split View) 확인 ----
+//
+// 아이패드에서 화면을 반으로 나누면 두 앱이 같이 보인다. 그러면 옆에서
+// 유튜브를 틀어놔도 브라우저는 "화면을 벗어났다"고 알려주지 않는다.
+// 폰에서는 앱이 하나만 보이니 없던 문제인데, 패드에서는 이 앱의 전제가
+// 통째로 무너진다.
+//
+// "지금 화면을 나눠 쓰는 중인가?"를 알려주는 기능은 브라우저에 없다.
+// 그래서 창이 기기 화면보다 뚜렷하게 좁은지로 짐작한다. 나눠 쓰면 창이
+// 절반 정도로 줄어들기 때문이다.
+//
+// 짐작이라 완벽하지 않다. 특히 7:3 으로 나눠서 이 앱이 넓은 쪽에 있으면
+// 못 잡을 수 있다. 실제 기기에서 확인이 필요하다.
+function splitViewInfo() {
+  // 손가락으로 쓰는 기기에서만 본다. 컴퓨터에서 창을 작게 줄인 것을
+  // 나눠쓰기로 착각하면 안 된다.
+  const touchDevice = navigator.maxTouchPoints > 1;
+  const win = Math.round(window.innerWidth);
+  const sw = Math.round(screen.width || 0);
+  const sh = Math.round(screen.height || 0);
+  const shortSide = sw && sh ? Math.min(sw, sh) : 0;
+
+  // 두 가지로 본다.
+  //  - screen.width 가 방향을 따라가는 기기(요즘 iOS)에서는 이것만으로 잡힌다
+  //  - 안 따라가는 기기에서는 짧은 변과 비교해 절반쯤일 때 잡는다
+  const narrow =
+    (sw > 0 && win < sw * 0.9) ||
+    (shortSide > 0 && win < shortSide * 0.85);
+
+  return { split: touchDevice && narrow, win: win, screen: sw, shortSide: shortSide };
+}
+
+// 설정 화면에 안내를 띄운다. 숫자도 같이 보여준다 —
+// 짐작이 틀렸을 때 어떤 값이었는지 알아야 고칠 수 있다.
+function updateSplitWarning() {
+  const info = splitViewInfo();
+  splitWarning.classList.toggle("hidden", !info.split);
+  if (info.split) {
+    splitNumbers.textContent =
+      "(창 " + info.win + "px / 화면 " + info.screen + "px)";
+  }
+  return info.split;
+}
+
+window.addEventListener("resize", () => {
+  updateSplitWarning();
+  // 타이머가 도는 중에 화면을 나누면 화면을 벗어난 것과 같다.
+  if (phase === "focus" && splitViewInfo().split) splitByHalf();
+});
+
+function splitByHalf() {
+  phase = "idle";
+  timerScreen.classList.remove("resting");
+  setFocusMode(false);
+  // 기록에는 화면 이탈(left)로 남긴다. 새 종류를 만들면 Firebase 규칙과
+  // 옛날 버전을 쓰는 친구들 화면이 같이 어긋난다.
+  stopTimer("left");
+  runningLabel.textContent = "🪟 화면을 나눠 써서 실패했어요";
   showResultProgress();
 }
 
@@ -1048,7 +1113,15 @@ async function renderRank() {
 
 // ---- 버튼 연결 ----
 
-startBtn.addEventListener("click", startTimer);
+startBtn.addEventListener("click", () => {
+  // 나눠 쓰는 중에 시작하면 옆에서 뭘 하든 성공으로 끝난다.
+  // 아예 시작하지 않고 이유를 알려준다.
+  if (updateSplitWarning()) {
+    splitWarning.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
+  startTimer();
+});
 cancelBtn.addEventListener("click", giveUpTimer);
 restartBtn.addEventListener("click", () => showScreen(setupScreen));
 

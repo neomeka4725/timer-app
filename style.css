@@ -13,6 +13,21 @@ body {
   color: #1c2333;
 }
 
+/* 패드용 두 칸 배치를 위해 감싼 상자.
+   폰에서는 display:contents 라서 레이아웃에 아무 영향이 없다. */
+.pad-cols,
+.pad-col {
+  display: contents;
+}
+
+/* 나눠쓰기 안내에 붙는 숫자. 짐작이 틀렸을 때 값을 알아야 고칠 수 있다. */
+.split-numbers {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
 .screen {
   width: 100%;
   max-width: 420px;
@@ -934,4 +949,148 @@ body.focus-mode .forgive-note {
 
 body.focus-mode .ring-sub {
   color: rgba(255, 255, 255, 0.42);
+}
+
+/* ---- 패드처럼 넓은 화면 ---- */
+/* 폭이 700px를 넘을 때만 바뀐다. 화면을 반으로 나눠 쓰면 창이 좁아져서
+   저절로 폰 배치로 돌아온다 (기기가 아니라 창 크기를 재기 때문이다). */
+
+@media (min-width: 700px) {
+  .screen {
+    max-width: 760px;
+    padding: 52px 56px 48px;
+  }
+
+  h1 {
+    font-size: 2.1rem;
+  }
+
+  .subtitle {
+    font-size: 1.15rem;
+  }
+
+  /* 두 칸으로 가른다 */
+  .pad-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+    align-items: start;
+    text-align: left;
+  }
+
+  .pad-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  #setup-screen .pad-col:first-child {
+    text-align: center;
+  }
+
+  .stats-cols {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  #stats-screen .pad-col {
+    text-align: center;
+  }
+
+  /* 버튼을 화면 끝까지 늘리지 않는다. 800px짜리 버튼은 눌러야 할 곳처럼
+     보이지 않고 그냥 띠처럼 보인다. */
+  #timer-screen .primary-btn,
+  #timer-screen .secondary-btn,
+  #timer-screen .share-box,
+  #setup-screen > .primary-btn,
+  #stats-screen > .primary-btn,
+  #stats-screen > .text-btn,
+  #stats-screen > .secondary-btn,
+  #board-screen > .primary-btn,
+  #board-screen > .text-btn,
+  #rank-screen > .primary-btn {
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .nav-row {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+    gap: 14px;
+  }
+
+  .nav-row .text-btn {
+    font-size: 1rem;
+    padding: 16px 0;
+  }
+
+  /* 타이머: 멀리서 보는 화면이라 크게. 가로로 눕히면 높이가 모자라므로
+     화면 높이에 맞춰 줄어들게 한다. */
+  .ring-wrap {
+    max-width: min(460px, 52vh);
+    margin-bottom: 28px;
+  }
+
+  .countdown {
+    font-size: min(5.5rem, 6.4vh);
+  }
+
+  .ring-sub {
+    font-size: 1rem;
+  }
+
+  .mission-label {
+    font-size: 1.5rem;
+  }
+
+  .running-label {
+    font-size: 1.15rem;
+  }
+
+  .round-badge {
+    font-size: 1rem;
+    padding: 6px 16px;
+  }
+
+  /* 설정 화면 */
+  .time-display {
+    font-size: 4.5rem;
+  }
+
+  .quick-btn,
+  .text-input,
+  .switch-text {
+    font-size: 1.05rem;
+  }
+
+  /* 기록 */
+  .stat-value {
+    font-size: 2.2rem;
+  }
+
+  .record-list li {
+    font-size: 1.05rem;
+    padding: 15px 4px;
+  }
+
+  /* 게시판: 두 단으로 흘린다. 글이 짧아서 한 단이면 자리가 남는다. */
+  #board-list {
+    column-count: 2;
+    column-gap: 20px;
+  }
+
+  .post {
+    break-inside: avoid;
+  }
+
+  /* 순위표 */
+  .rank-list li {
+    padding: 16px 14px;
+  }
+
+  .rank-name,
+  .rank-value {
+    font-size: 1.05rem;
+  }
 }
