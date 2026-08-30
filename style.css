@@ -145,6 +145,17 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* 지금 같이 집중 중인 사람 수. 눈에 띄되 읽으려고 멈출 정도는 아니게. */
+.focus-mates {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+body.focus-mode .focus-mates {
+  color: rgba(255, 255, 255, 0.45);
+}
+
 /* ---- 남은 시간 링 ---- */
 /* 숫자를 읽지 않아도 얼마나 남았는지 한눈에 보이게 하는 동그란 막대. */
 

@@ -26,6 +26,7 @@ const runningLabel = document.getElementById("running-label");
 const countdownEl = document.getElementById("countdown");
 const ringProgress = document.getElementById("ring-progress");
 const ringSub = document.getElementById("ring-sub");
+const focusMates = document.getElementById("focus-mates");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
@@ -334,6 +335,7 @@ function startBreak() {
   breakEndTime = Date.now() + BREAK_SECONDS * 1000;
 
   timerScreen.classList.add("resting");
+  stopMates();
   setResultState("");
   countdownEl.classList.remove("failed");
   renderCountdown(BREAK_SECONDS);
@@ -433,6 +435,7 @@ function showScreen(screen) {
   if (screen !== timerScreen) setFocusMode(false);
   // 도전 중 화면을 떠나면 1초마다 도는 시계를 멈춘다.
   if (screen !== liveScreen) stopLiveTicker();
+  if (screen !== timerScreen) stopMates();
   // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
   if (screen === setupScreen) updateSplitWarning();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
@@ -581,6 +584,7 @@ function startTimer() {
   showScreen(timerScreen);
   // 지금 도전 중 목록에 올린다. 실패해도 타이머는 그대로 돈다.
   beginChallenge();
+  startMates();
   requestWakeLock();
   // 버튼을 누른 지금이 소리 장치를 깨울 수 있는 유일한 순간이다.
   wakeUpAudio();
@@ -610,6 +614,7 @@ function stopTimer(result, awaySeconds) {
   releaseWakeLock();
   // 성공·실패·포기·화면 이탈이 모두 여기를 지나므로 한 곳에서 내린다.
   endChallenge();
+  stopMates();
 
   const away = Math.round(awaySeconds || 0);
   const elapsedSeconds =
@@ -963,6 +968,55 @@ async function loadLiveTiers() {
     // 티어를 못 가져와도 도전 목록은 보여준다.
     liveTiers = {};
   }
+}
+
+// ---- 지금 같이 집중 중인 사람 ----
+//
+// 타이머 화면에 "몇 명이 함께 하는지"만 보여준다. 혼자가 아니라는 걸
+// 아는 것만으로 조금 더 버티게 된다.
+//
+// 목록이나 버튼은 일부러 넣지 않았다. 집중하라고 만든 화면에서 남의 카드를
+// 읽고 있으면 앞뒤가 안 맞는다. 자세히 보고 싶으면 "🔥 도전 중" 화면이 있다.
+const MATES_REFRESH_MS = 2 * 60 * 1000;
+let matesTimerId = null;
+
+function stopMates() {
+  if (matesTimerId !== null) {
+    clearInterval(matesTimerId);
+    matesTimerId = null;
+  }
+  focusMates.classList.add("hidden");
+}
+
+async function refreshMates() {
+  // 집중 중이 아니면 셀 이유가 없다.
+  if (phase !== "focus") return;
+  const me = loadNickname();
+  try {
+    const items = await cloudLoadChallenges();
+    // 나는 빼고 센다. "함께"라는 말과 맞아야 한다.
+    const others = items.filter((i) => i.nickname !== me).length;
+    // 도중에 판이 끝났으면 건드리지 않는다.
+    if (phase !== "focus") return;
+    if (others === 0) {
+      focusMates.classList.add("hidden");
+      return;
+    }
+    focusMates.textContent = "🔥 " + others + "명이 함께 집중 중";
+    focusMates.classList.remove("hidden");
+  } catch (err) {
+    // 못 불러와도 타이머는 그대로다. 아무것도 안 보여준다.
+    focusMates.classList.add("hidden");
+  }
+}
+
+function startMates() {
+  stopMates();
+  refreshMates();
+  matesTimerId = setInterval(() => {
+    // 화면을 안 보고 있으면 굳이 불러오지 않는다.
+    if (!document.hidden) refreshMates();
+  }, MATES_REFRESH_MS);
 }
 
 function beginChallenge() {
