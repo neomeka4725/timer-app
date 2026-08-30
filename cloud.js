@@ -66,7 +66,7 @@ async function cloudSaveRecord(record) {
     }
   );
   if (!res.ok) {
-    throw new Error("기록 저장 실패 (" + res.status + ")");
+    throw makeError("기록 저장 실패", res.status);
   }
   return true;
 }
@@ -87,7 +87,7 @@ async function runQuery(body) {
     }
   );
   if (!res.ok) {
-    throw new Error("불러오기 실패 (" + res.status + ")");
+    throw makeError("불러오기 실패", res.status);
   }
   const rows = await res.json();
   // 결과가 없으면 문서가 들어있지 않은 줄이 하나 온다.
@@ -104,7 +104,7 @@ async function postDoc(path, fields) {
     }
   );
   if (!res.ok) {
-    throw new Error("저장 실패 (" + res.status + ")");
+    throw makeError("저장 실패", res.status);
   }
   return res.json();
 }
@@ -303,7 +303,7 @@ async function cloudLoadCheers(postId) {
     FIRESTORE_BASE + "/" + COL_POSTS + "/" + postId + "/cheers?pageSize=50&key=" + FIREBASE_KEY
   );
   if (!res.ok) {
-    throw new Error("응원 불러오기 실패 (" + res.status + ")");
+    throw makeError("응원 불러오기 실패", res.status);
   }
   const data = await res.json();
   return (data.documents || [])
@@ -382,7 +382,7 @@ async function cloudLoadRecords(nickname) {
     }
   );
   if (!res.ok) {
-    throw new Error("기록 불러오기 실패 (" + res.status + ")");
+    throw makeError("기록 불러오기 실패", res.status);
   }
 
   const rows = await res.json();
@@ -412,6 +412,10 @@ async function hashPin(nickname, pin) {
 
 // 실패했을 때 "무엇 때문에" 실패했는지 알 수 있도록 상태 번호를 함께 담는다.
 // 403은 Firebase 보안 규칙이 막은 것이고, 그 밖에는 대개 인터넷 문제다.
+// 오류에 상태 코드를 붙여서 던진다.
+// 이걸 안 붙이면 403(보안 규칙이 막음)과 진짜 연결 실패를 구분할 수 없어서,
+// 인터넷이 멀쩡한 사람에게 "인터넷을 확인하세요"라고 잘못 안내하게 된다.
+// 예전에 닉네임 화면에서 실제로 겪은 문제라, 던지는 곳은 전부 이걸 쓴다.
 function makeError(message, status) {
   const err = new Error(message + " (" + status + ")");
   err.status = status;
@@ -448,6 +452,6 @@ async function cloudCreateUser(nickname, pinHash) {
       }),
     }
   );
-  if (!res.ok) throw new Error("닉네임 등록 실패 (" + res.status + ")");
+  if (!res.ok) throw makeError("닉네임 등록 실패", res.status);
   return true;
 }
