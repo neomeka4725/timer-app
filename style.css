@@ -2,6 +2,17 @@
   box-sizing: border-box;
 }
 
+/* 손가락으로 누르는 곳에서는 글자가 선택되지 않게 한다.
+   아이패드에서 스위치를 연달아 누르면 안쪽 안내 글자가 파랗게 선택돼서
+   화면이 고장난 것처럼 보인다. 길게 눌렀을 때 뜨는 복사 메뉴도 막는다.
+   글을 읽는 곳(게시판·기록)은 그대로 둬서 복사할 수 있게 한다. */
+button,
+.tip summary {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -134,13 +145,6 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-.mission-input {
-  text-align: left;
-  font-size: 1rem;
-  padding: 15px 16px;
-  margin-bottom: 20px;
-}
-
 /* ---- 남은 시간 링 ---- */
 /* 숫자를 읽지 않아도 얼마나 남았는지 한눈에 보이게 하는 동그란 막대. */
 
@@ -239,6 +243,16 @@ h1 {
   margin-bottom: 12px;
   /* iOS에서 글자 크기가 16px보다 작으면 입력할 때 화면이 확대된다 */
   font-family: inherit;
+}
+
+/* 이 규칙은 반드시 .text-input 아래에 있어야 한다.
+   위로 올리면 세기가 같아서 .text-input 의 가운데 정렬이 이겨버린다.
+   (게시판 빨간 점이 늘 켜져 있던 것과 같은 종류의 문제다) */
+.mission-input {
+  text-align: left;
+  font-size: 1rem;
+  padding: 15px 16px;
+  margin-bottom: 20px;
 }
 
 .greeting {
