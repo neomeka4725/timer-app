@@ -161,13 +161,25 @@ h1 {
   transition: stroke-dashoffset 0.3s linear;
 }
 
-.countdown {
+/* 숫자와 설명을 링 한가운데에 세로로 겹쳐 놓는다 */
+.ring-center {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.ring-sub {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: #9aa2b4;
+}
+
+.countdown {
   font-size: 3.75rem;
+  line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -1.5px;
@@ -746,8 +758,8 @@ h1 {
 /* 음량이 작아 소리를 못 들어도 눈으로 알 수 있게 한다. */
 
 @keyframes celebrate {
-  0%, 100% { background: transparent; }
-  50% { background: #bbf7d0; }
+  0%, 100% { background: #ecfdf5; }
+  50% { background: #a7f3d0; }
 }
 
 #timer-screen.celebrate {
@@ -759,7 +771,6 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   #timer-screen.celebrate {
     animation: none;
-    background: #bbf7d0;
   }
 }
 
@@ -849,4 +860,78 @@ body.focus-mode .forgive-note {
   background: rgba(245, 158, 11, 0.13);
   border-color: rgba(251, 191, 36, 0.34);
   color: #fcd34d;
+}
+
+/* ---- 판이 끝났을 때 ---- */
+/* 번쩍임이 끝난 뒤에도 색이 남아서, 나중에 봐도 무슨 결과였는지 알 수 있다. */
+
+#timer-screen.done-success {
+  background: #ecfdf5;
+  border: 2px solid #a7f3d0;
+  border-radius: 20px;
+}
+
+#timer-screen.done-success .countdown {
+  color: #059669;
+}
+
+#timer-screen.done-success .ring-track {
+  stroke: #c7f2df;
+}
+
+#timer-screen.done-success .ring-progress {
+  stroke: #10b981;
+}
+
+#timer-screen.done-success .running-label {
+  color: #047857;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+#timer-screen.done-success .mission-label {
+  color: #047857;
+}
+
+#timer-screen.done-fail {
+  background: #fef4f4;
+  border: 2px solid #fecaca;
+  border-radius: 20px;
+}
+
+#timer-screen.done-fail .running-label {
+  color: #b42318;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+#timer-screen.done-fail .ring-track {
+  stroke: #f6e3e3;
+}
+
+/* 성공했을 때는 "게시판에 올리기"가 주인공이라 "다시 하기"를 뒤로 뺀다.
+   파란 버튼 두 개가 나란히 있으면 어느 쪽을 눌러야 할지 헷갈린다. */
+.primary-btn.as-secondary {
+  background: #f1f2f6;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+#timer-screen.resting .ring-sub {
+  color: #059669;
+  opacity: 0.8;
+}
+
+#timer-screen.done-success .ring-sub {
+  color: #059669;
+  opacity: 0.8;
+}
+
+#timer-screen.done-fail .ring-sub {
+  color: #e5484d;
+  opacity: 0.75;
+}
+
+body.focus-mode .ring-sub {
+  color: rgba(255, 255, 255, 0.42);
 }

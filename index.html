@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=20 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=21 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=20" />
+  <link rel="manifest" href="manifest.json?v=21" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=20" />
+  <link rel="stylesheet" href="style.css?v=21" />
 </head>
 <body>
 
@@ -188,7 +188,10 @@
         <circle class="ring-track" cx="138" cy="138" r="120" />
         <circle class="ring-progress" id="ring-progress" cx="138" cy="138" r="120" />
       </svg>
-      <div class="countdown" id="countdown">10:00</div>
+      <div class="ring-center">
+        <div class="countdown" id="countdown">10:00</div>
+        <p class="ring-sub" id="ring-sub">남았어요</p>
+      </div>
     </div>
 
     <p class="running-label" id="running-label">폰을 멀리하고 목표를 지켜보세요</p>
@@ -287,8 +290,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=20"></script>
-  <script src="cloud.js?v=20"></script>
-  <script src="script.js?v=20"></script>
+  <script src="storage.js?v=21"></script>
+  <script src="cloud.js?v=21"></script>
+  <script src="script.js?v=21"></script>
 </body>
 </html>
