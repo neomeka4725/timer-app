@@ -1024,6 +1024,9 @@ async function loadLive() {
     liveList.textContent = "";
     return;
   }
+  // 불러오는 사이에 다른 화면으로 갔으면 여기서 멈춘다.
+  // 안 그러면 안 보이는 화면 때문에 1초 시계가 계속 돈다.
+  if (liveScreen.classList.contains("hidden")) return;
   renderLive();
   startLiveTicker();
 }
@@ -1534,9 +1537,15 @@ async function confirmNickname() {
     showNicknameError("닉네임을 입력해 주세요.");
     return;
   }
-  // 닉네임이 문서 주소로 쓰이기 때문에 빗금은 넣을 수 없다.
+  // 닉네임이 그대로 문서 이름이 되기 때문에 Firestore 가 못 받는 값은 막는다.
+  // 빗금, 점 하나(.), 점 둘(..), 앞뒤로 밑줄 두 개(__이름__)가 그렇다.
+  // 안 막으면 저장할 때가 되어서야 깨지는데, 그때는 왜 안 되는지 알 수 없다.
   if (name.includes("/")) {
     showNicknameError("닉네임에 / 는 쓸 수 없어요.");
+    return;
+  }
+  if (name === "." || name === ".." || /^__.*__$/.test(name)) {
+    showNicknameError("그 닉네임은 쓸 수 없어요. 다른 이름으로 정해 주세요.");
     return;
   }
   if (!/^\d{4}$/.test(pin)) {
