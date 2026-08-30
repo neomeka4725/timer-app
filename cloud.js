@@ -218,7 +218,7 @@ async function cloudLoadChallengeCheers() {
     structuredQuery: {
       from: [{ collectionId: COL_CHEERS }],
       orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }],
-      limit: 200,
+      limit: 100,
     },
   });
   const counts = {};
@@ -319,7 +319,17 @@ async function cloudLoadCheers(postId) {
 // ---- 순위표 ----
 
 // 반 전체 기록을 가져와 닉네임별로 합친다.
+// 순위표는 기록 전체(최대 2000개)를 읽는다. 비싼 질의라서 잠깐 담아둔다.
+// 도전 중 화면의 티어 배지도 같은 자료를 쓰기 때문에, 캐시가 없으면
+// 화면을 열 때마다 2000개씩 읽게 된다. (무료 요금제는 하루 5만 개다)
+const RANKING_CACHE_MS = 60 * 1000;
+let rankingCache = null;
+let rankingCachedAt = 0;
+
 async function cloudLoadRanking() {
+  if (rankingCache && Date.now() - rankingCachedAt < RANKING_CACHE_MS) {
+    return rankingCache;
+  }
   const docs = await runQuery({
     structuredQuery: {
       from: [{ collectionId: COL_RECORDS }],
@@ -344,7 +354,9 @@ async function cloudLoadRanking() {
     }
   });
 
-  return [...byName.values()];
+  rankingCache = [...byName.values()];
+  rankingCachedAt = Date.now();
+  return rankingCache;
 }
 
 // 닉네임이 같은 기록을 전부 내려받는다.

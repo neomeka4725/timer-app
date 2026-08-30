@@ -65,7 +65,6 @@ const stopPomoBtn = document.getElementById("stop-pomo-btn");
 const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
-const clearBtn = document.getElementById("clear-btn");
 
 const tierBadge = document.getElementById("tier-badge");
 const tierTokens = document.getElementById("tier-tokens");
@@ -997,10 +996,12 @@ function shortLeft(ms) {
   const m = Math.floor(total / 60);
   const sec = total % 60;
   if (m === 0) return sec + "초 남음";
-  return m + "분 남음";
+  return m + "분 " + sec + "초 남음";
 }
 
 async function loadLive() {
+  if (liveLoading) return;
+  liveLoading = true;
   liveStatus.textContent = "불러오는 중…";
   liveStatus.classList.remove("offline");
   try {
@@ -1010,7 +1011,10 @@ async function loadLive() {
     ]);
     liveItems = items;
     liveCheers = cheers;
+    liveLoadedAt = Date.now();
+    liveLoading = false;
   } catch (err) {
+    liveLoading = false;
     liveItems = [];
     liveStatus.classList.add("offline");
     liveStatus.textContent =
@@ -1023,6 +1027,14 @@ async function loadLive() {
   renderLive();
   startLiveTicker();
 }
+
+// 1분마다 목록을 다시 불러온다. 열어둔 사이에 새로 시작한 사람이
+// 안 보이면 "지금 도전 중"이라는 이름이 무색해진다.
+// 화면을 안 보고 있을 때는 읽지 않는다. (무료 요금제 읽기를 아낀다)
+const LIVE_RELOAD_MS = 60 * 1000;
+let liveLoadedAt = 0;
+// 불러오는 데 1초가 넘게 걸리면 시계가 또 부르려 든다. 한 번에 하나만.
+let liveLoading = false;
 
 function startLiveTicker() {
   stopLiveTicker();
@@ -1039,6 +1051,14 @@ function startLiveTicker() {
     if (changed) {
       liveItems = liveItems.filter((i) => i.endAt > now);
       renderLive();
+    }
+    // 가끔 새로 불러온다.
+    if (
+      !document.hidden &&
+      !liveScreen.classList.contains("hidden") &&
+      now - liveLoadedAt > LIVE_RELOAD_MS
+    ) {
+      loadLive();
     }
   }, 1000);
 }
@@ -1447,16 +1467,6 @@ statsBtn.addEventListener("click", () => {
 
 statsBackBtn.addEventListener("click", () => showScreen(setupScreen));
 statsBackTop.addEventListener("click", () => showScreen(setupScreen));
-
-clearBtn.addEventListener("click", () => {
-  const message =
-    "이 기기에 저장된 기록을 지울까요?\n\n" +
-    "이미 인터넷에 올라간 기록은 남아 있어서, 인터넷이 연결되면 다시 보입니다.";
-  if (confirm(message)) {
-    clearRecords();
-    renderStats();
-  }
-});
 
 renameBtn.addEventListener("click", () => askNickname());
 

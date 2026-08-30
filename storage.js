@@ -173,14 +173,6 @@ function unsyncedRecords() {
   return loadRecords().filter((r) => !r.synced);
 }
 
-function clearRecords() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (err) {
-    // 지우기에 실패해도 앱은 계속 돌아간다.
-  }
-}
-
 // ---- 도전자에게 응원을 보냈는지 기억 ----
 // 같은 사람이 같은 판에 계속 누르는 것을 막는다.
 // 이 기기에만 남는 표시라 완벽한 잠금은 아니고, 실수로 여러 번 누르는 것을
