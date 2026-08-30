@@ -62,14 +62,14 @@
 `index.html` 맨 위와 맨 아래에 이렇게 되어 있다.
 
 ```html
-<link rel="stylesheet" href="style.css?v=26" />
-<script src="storage.js?v=26"></script>
-<script src="cloud.js?v=26"></script>
-<script src="script.js?v=26"></script>
+<link rel="stylesheet" href="style.css?v=27" />
+<script src="storage.js?v=27"></script>
+<script src="cloud.js?v=27"></script>
+<script src="script.js?v=27"></script>
 ```
 
-`?v=26`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
-**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=27`).
+`?v=27`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
+**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=28`).
 
 안 올리면 어떻게 되나: 사파리가 예전 `script.js`를 그대로 쓴다. 새 버튼은
 화면에 보이는데 눌러도 아무 반응이 없다. 원인을 찾기 매우 어렵다.
@@ -150,6 +150,11 @@ Firebase 라이브러리를 받지 않고 **Firestore REST API를 `fetch`로 직
 숫자를 하나 두고 올리는 대신 **문서를 하나씩 쌓아서 센다.** 숫자를 고치려면
 수정 권한이 필요한데, 그걸 열면 아무나 남의 기록을 고칠 수 있게 된다.
 게시판 응원과 같은 방식이다.
+
+> **읽기 횟수를 아껴야 한다.** 무료 요금제는 하루 5만 번 읽을 수 있다.
+> 순위표는 기록 전체(최대 2000개)를 읽는 비싼 질의라 1분간 담아뒀다가
+> 다시 쓴다 (`cloud.js`의 `rankingCache`). 티어 배지도 같은 자료를 쓴다.
+> 새 기능을 넣을 때 화면을 열 때마다 전체를 읽지 않는지 확인할 것.
 
 ### 보안 규칙 요약
 
