@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=22 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=23 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=22" />
+  <link rel="manifest" href="manifest.json?v=23" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=22" />
+  <link rel="stylesheet" href="style.css?v=23" />
 </head>
 <body>
 
@@ -44,6 +44,9 @@
     <p class="notice warning hidden" id="nickname-error">닉네임을 입력해 주세요.</p>
 
     <button type="button" id="nickname-save-btn" class="primary-btn">시작하기</button>
+    <!-- 이미 쓰던 사람이 "닉네임 바꾸기"로 들어온 경우에만 보인다.
+         처음 들어온 사람에게는 돌아갈 곳이 없으므로 숨긴다. -->
+    <button type="button" id="nickname-cancel-btn" class="secondary-btn hidden">그대로 두기</button>
 
     <p class="notice">
       회원가입은 없어요. 닉네임과 숫자 4자리만 정하면 됩니다.<br />
@@ -317,8 +320,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=22"></script>
-  <script src="cloud.js?v=22"></script>
-  <script src="script.js?v=22"></script>
+  <script src="storage.js?v=23"></script>
+  <script src="cloud.js?v=23"></script>
+  <script src="script.js?v=23"></script>
 </body>
 </html>
