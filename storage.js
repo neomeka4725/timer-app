@@ -181,6 +181,98 @@ function clearRecords() {
   }
 }
 
+// ---- 도전자에게 응원을 보냈는지 기억 ----
+// 같은 사람이 같은 판에 계속 누르는 것을 막는다.
+// 이 기기에만 남는 표시라 완벽한 잠금은 아니고, 실수로 여러 번 누르는 것을
+// 막는 정도다. (진짜로 막으려면 로그인이 있어야 한다)
+const CHEERED_KEY = "wellness-timer-cheered";
+
+function loadCheered() {
+  try {
+    return JSON.parse(localStorage.getItem(CHEERED_KEY) || "[]");
+  } catch (err) {
+    return [];
+  }
+}
+
+function alreadyCheered(challengeId) {
+  return loadCheered().indexOf(challengeId) !== -1;
+}
+
+function markCheered(challengeId) {
+  try {
+    const list = loadCheered();
+    if (list.indexOf(challengeId) !== -1) return;
+    list.push(challengeId);
+    // 끝없이 쌓이지 않게 최근 200개만 남긴다.
+    localStorage.setItem(CHEERED_KEY, JSON.stringify(list.slice(-200)));
+  } catch (err) {
+    // 못 적어도 응원 자체는 보내졌다.
+  }
+}
+
+// ---- 토큰과 티어 ----
+//
+// 토큰은 따로 저장하지 않는다. 저장해두면 기록과 어긋날 수 있고,
+// 고칠 수 있는 값이 되면 누가 숫자를 바꿔치기할 수도 있다.
+// 항상 기록에서 다시 계산한다. (성공한 판의 목표 시간을 분 단위로 더한다)
+//
+// 성공 1분 = 1토큰. 실패·포기는 0토큰.
+function calculateTokens(records) {
+  return records
+    .filter((r) => r.result === "success")
+    .reduce((sum, r) => sum + Math.max(0, Math.round(r.goalMinutes)), 0);
+}
+
+// 낮은 티어부터 차례대로. 마지막이 최고 티어다.
+const TIERS = [
+  { name: "아이언", min: 0, emoji: "⬜" },
+  { name: "브론즈", min: 100, emoji: "🟫" },
+  { name: "실버", min: 300, emoji: "⬛" },
+  { name: "골드", min: 600, emoji: "🟨" },
+  { name: "플래티넘", min: 1000, emoji: "🟦" },
+  { name: "다이아", min: 1500, emoji: "💎" },
+  { name: "마스터", min: 2500, emoji: "👑" },
+];
+
+// 토큰 수로 지금 티어와 다음 티어를 구한다.
+// 진행률은 전체가 아니라 "지금 티어 구간" 기준이다.
+// 예: 골드(600)에서 플래티넘(1000) 사이에 800이면 50%.
+function computeTierFromTokens(tokens) {
+  const t = Math.max(0, Math.round(tokens || 0));
+
+  let index = 0;
+  for (let i = 0; i < TIERS.length; i++) {
+    if (t >= TIERS[i].min) index = i;
+  }
+
+  const current = TIERS[index];
+  const next = TIERS[index + 1] || null;
+
+  if (!next) {
+    return {
+      tokens: t,
+      tier: current,
+      nextTier: null,
+      needed: 0,
+      progress: 100,
+      isMax: true,
+    };
+  }
+
+  const span = next.min - current.min;
+  const done = t - current.min;
+
+  return {
+    tokens: t,
+    tier: current,
+    nextTier: next,
+    needed: next.min - t,
+    progress: Math.max(0, Math.min(100, Math.round((done / span) * 100))),
+    isMax: false,
+  };
+}
+
 // 기록 목록에서 통계를 계산한다.
 function summarize(records) {
   const successes = records.filter((r) => r.result === "success");
