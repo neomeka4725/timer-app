@@ -254,7 +254,7 @@ async function cloudLoadChallengeCheers() {
     structuredQuery: {
       from: [{ collectionId: COL_CHEERS }],
       orderBy: [{ field: { fieldPath: "at" }, direction: "DESCENDING" }],
-      limit: 100,
+      limit: 60,
     },
   });
   // 누가 보냈는지도 같이 담는다. 세는 것만으로는 이름을 못 보여준다.
