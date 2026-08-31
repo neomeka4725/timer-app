@@ -1555,3 +1555,20 @@ body.focus-mode .ring-sub {
     font-size: 1.05rem;
   }
 }
+
+/* ▼▼▼ 개발용 · 다 만들면 이 덩어리를 통째로 지울 것 ▼▼▼
+   (index.html 과 script.js 의 "개발용" 덩어리도 같이)
+   진짜 버튼처럼 안 보이게 일부러 작고 흐리게 뒀다. 반 친구들이
+   "이건 뭐지" 하고 누르는 일을 조금이라도 줄이려는 것이다. */
+.dev-btn {
+  display: block;
+  margin: 24px auto 0;
+  padding: 8px 14px;
+  border: 1px dashed #d7ddee;
+  border-radius: 10px;
+  background: transparent;
+  color: #b6bccb;
+  font-size: 0.75rem;
+  font-family: inherit;
+}
+/* ▲▲▲ 개발용 여기까지 ▲▲▲ */

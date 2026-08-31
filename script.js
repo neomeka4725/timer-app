@@ -1465,7 +1465,8 @@ function beginChallenge() {
   cloudStartChallenge({
     nickname: nickname,
     mission: missionInput.value.trim().slice(0, 20),
-    goalMinutes: Math.round(goalSeconds / 60),
+    // Firebase 규칙이 1 이상만 받는다. 1분보다 짧은 판도 막히지 않게 한다.
+    goalMinutes: Math.max(1, Math.round(goalSeconds / 60)),
     startedAt: startedAt,
     endAt: endTime,
   }).catch(() => {});
@@ -1483,7 +1484,8 @@ function extendChallenge() {
   cloudStartChallenge({
     nickname: nickname,
     mission: missionInput.value.trim().slice(0, 20),
-    goalMinutes: Math.round(goalSeconds / 60),
+    // Firebase 규칙이 1 이상만 받는다. 1분보다 짧은 판도 막히지 않게 한다.
+    goalMinutes: Math.max(1, Math.round(goalSeconds / 60)),
     startedAt: myChallengeStartedAt,
     endAt: endTime,
   }).catch(() => {});
@@ -2179,3 +2181,37 @@ if (savedNickname === "") {
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
+
+// ▼▼▼ 개발용 · 다 만들면 이 덩어리를 통째로 지울 것 ▼▼▼
+// (index.html 의 dev-quick-btn 한 줄, style.css 의 .dev-btn 덩어리도 같이)
+//
+// 10분짜리를 걸어놓고 기다리면서 시험할 수가 없어서 넣었다.
+// 평소대로 startTimer() 로 시작한 뒤, 이번 판만 15초로 줄인다.
+// 이렇게 하면 startTimer() 안을 하나도 안 건드려서, 지울 때 이 덩어리만
+// 지우면 원래대로 돌아온다.
+//
+// 주의 1: 기록에는 "1분 목표"로 남는다. Firebase 규칙이 goalMinutes 를
+//         1 이상 정수로만 받기 때문이다. 15초 성공도 1토큰이 된다.
+// 주의 2: 이 버튼이 올라가 있는 동안에는 반 친구들도 누를 수 있다.
+//         누른 만큼 성공 횟수와 토큰이 늘어난다. 그래서 빼야 한다.
+const DEV_TEST_SECONDS = 15;
+
+document.getElementById("dev-quick-btn").addEventListener("click", () => {
+  // 나눠쓰기 막이는 시작하기 버튼 쪽에 있다. 여기가 뒷문이 되면 안 된다.
+  if (updateSplitWarning()) {
+    splitWarning.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
+  startTimer();
+  // 이미 집중 중이면 startTimer 가 아무것도 안 하고 돌아간다.
+  if (phase !== "focus") return;
+
+  goalSeconds = DEV_TEST_SECONDS;
+  endTime = Date.now() + DEV_TEST_SECONDS * 1000;
+  remainingSeconds = DEV_TEST_SECONDS;
+  renderCountdown(remainingSeconds);
+  setRing(1);
+  // "지금 도전 중" 목록에 올라간 남은 시간도 새 값으로 맞춘다.
+  extendChallenge();
+});
+// ▲▲▲ 개발용 여기까지 ▲▲▲

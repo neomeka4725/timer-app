@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=38 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=39 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=38" />
+  <link rel="manifest" href="manifest.json?v=39" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=38" />
+  <link rel="stylesheet" href="style.css?v=39" />
 </head>
 <body>
 
@@ -229,6 +229,15 @@
       <button type="button" id="board-btn" class="text-btn">💬<span class="dot hidden" id="board-dot"></span><br />게시판</button>
       <button type="button" id="rank-btn" class="text-btn">🏆<br />순위표</button>
     </div>
+
+    <!-- ▼▼▼ 개발용 · 다 만들면 지울 것 ▼▼▼
+         10분씩 기다리며 시험할 수 없어서 넣은 버튼이다.
+         지울 때는 이 <button> 한 줄과 함께
+           style.css  의 "개발용" 덩어리
+           script.js  의 "개발용" 덩어리
+         를 같이 지우고 ?v= 숫자를 올린다. 셋 다 같은 표시로 감싸 뒀다. -->
+    <button type="button" id="dev-quick-btn" class="dev-btn">🧪 15초로 시작 (개발용)</button>
+    <!-- ▲▲▲ 개발용 여기까지 ▲▲▲ -->
   </section>
 
   <!-- 화면 2: 타이머 실행 화면 -->
@@ -390,8 +399,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=38"></script>
-  <script src="cloud.js?v=38"></script>
-  <script src="script.js?v=38"></script>
+  <script src="storage.js?v=39"></script>
+  <script src="cloud.js?v=39"></script>
+  <script src="script.js?v=39"></script>
 </body>
 </html>
