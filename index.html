@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=35 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=36 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=35" />
+  <link rel="manifest" href="manifest.json?v=36" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=35" />
+  <link rel="stylesheet" href="style.css?v=36" />
 </head>
 <body>
 
@@ -371,19 +371,17 @@
       <h2 class="screen-title">🏆 우리 반 순위</h2>
     </div>
 
-    <div class="quick-buttons">
-      <button type="button" class="quick-btn rank-sort active" data-sort="count">성공 횟수</button>
-      <button type="button" class="quick-btn rank-sort" data-sort="time">누적 시간</button>
-    </div>
-
+    <!-- 기준을 고르는 버튼은 뺐다. 성공 횟수로 줄을 세우면 1분짜리를
+         여러 번 한 사람이 위로 올라가서, 오래 집중한 사람이 손해를 본다.
+         누적 시간 하나로만 센다. -->
     <p class="sync-status" id="rank-status">불러오는 중…</p>
     <ol class="rank-list" id="rank-list"></ol>
 
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=35"></script>
-  <script src="cloud.js?v=35"></script>
-  <script src="script.js?v=35"></script>
+  <script src="storage.js?v=36"></script>
+  <script src="cloud.js?v=36"></script>
+  <script src="script.js?v=36"></script>
 </body>
 </html>

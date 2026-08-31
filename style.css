@@ -1122,6 +1122,14 @@ body.focus-mode .ring-sub {
   height: 20px;
 }
 
+/* 순위표에서는 옆에 선 이름이 두 줄이라 조금 키운다.
+   .tier-medal.small 보다 세기가 높아야 이긴다. 세기가 같으면 파일에서
+   나중에 나온 쪽이 이기는데, 순위표 규칙은 이 위쪽에 있다. */
+.rank-list .tier-medal.small {
+  width: 24px;
+  height: 26px;
+}
+
 /* 티어별 색. storage.js 의 TIERS 에 있는 key 와 이름이 짝을 이룬다. */
 .tier-medal.tm-iron   { --tm-light: #9aa3b2; --tm-main: #6b7280; --tm-dark: #3d4450; }
 .tier-medal.tm-bronze { --tm-light: #e2a26c; --tm-main: #b0693a; --tm-dark: #6d3f20; }

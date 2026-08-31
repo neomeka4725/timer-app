@@ -57,7 +57,6 @@ const rankScreen = document.getElementById("rank-screen");
 const rankBtn = document.getElementById("rank-btn");
 const rankStatus = document.getElementById("rank-status");
 const rankList = document.getElementById("rank-list");
-const rankSortButtons = document.querySelectorAll(".rank-sort");
 
 const soundToggle = document.getElementById("sound-toggle");
 const soundTest = document.getElementById("sound-test");
@@ -1690,8 +1689,10 @@ async function sharePost() {
 }
 
 // ---- 순위표 ----
-
-let rankSort = "count";
+//
+// 기준은 누적 집중 시간 하나뿐이다. 성공 횟수로도 줄을 세울 수 있게
+// 해뒀었는데, 그러면 1분짜리를 스무 번 한 사람이 50분씩 열 번 한 사람보다
+// 위로 간다. 이 앱이 늘리고 싶은 건 횟수가 아니라 집중한 시간이다.
 
 async function renderRank() {
   rankStatus.textContent = "불러오는 중…";
@@ -1715,13 +1716,12 @@ async function renderRank() {
     return;
   }
 
-  rows.sort((a, b) =>
-    rankSort === "count"
-      ? b.successCount - a.successCount || b.totalSeconds - a.totalSeconds
-      : b.totalSeconds - a.totalSeconds || b.successCount - a.successCount
+  // 시간이 같으면 성공 횟수로 가른다.
+  rows.sort(
+    (a, b) => b.totalSeconds - a.totalSeconds || b.successCount - a.successCount
   );
 
-  rankStatus.textContent = "모두 " + rows.length + "명";
+  rankStatus.textContent = "모두 " + rows.length + "명 · 누적 집중 시간 순";
   const me = loadNickname();
 
   rows.forEach((row, index) => {
@@ -1732,25 +1732,32 @@ async function renderRank() {
     no.className = "rank-no";
     no.textContent = index + 1;
 
+    // 티어는 여기 있는 자료로 바로 계산한다. 순위표의 누적 시간은 성공한
+    // 판만 더한 값이라, 분으로 바꾸면 토큰과 같은 숫자가 된다.
+    // 이걸 위해 따로 불러오는 것은 없다. 읽기가 늘지 않는다.
+    const info = computeTierFromTokens(Math.round(row.totalSeconds / 60));
+
+    const medal = document.createElement("span");
+    applyMedal(medal, info.tier);
+    medal.classList.add("small");
+    medal.setAttribute("aria-hidden", "true");
+
     const name = document.createElement("span");
     name.className = "rank-name";
     name.textContent = row.nickname;
+
     const sub = document.createElement("span");
     sub.className = "rank-sub";
-    sub.textContent =
-      rankSort === "count"
-        ? formatDuration(row.totalSeconds) + " 집중"
-        : row.successCount + "번 성공";
+    // 뱃지는 그림이라 눈이 안 보이는 사람에게는 안 읽힌다.
+    // 티어 이름을 글자로 같이 적어둔다.
+    sub.textContent = info.tier.name + " · " + row.successCount + "번 성공";
     name.appendChild(sub);
 
     const value = document.createElement("span");
     value.className = "rank-value";
-    value.textContent =
-      rankSort === "count"
-        ? row.successCount + "번"
-        : formatDuration(row.totalSeconds);
+    value.textContent = formatDuration(row.totalSeconds);
 
-    li.append(no, name, value);
+    li.append(no, medal, name, value);
     rankList.appendChild(li);
   });
 }
@@ -1805,13 +1812,6 @@ document
 rankBtn.addEventListener("click", () => {
   showScreen(rankScreen);
   renderRank();
-});
-rankSortButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    rankSort = btn.dataset.sort;
-    rankSortButtons.forEach((b) => b.classList.toggle("active", b === btn));
-    renderRank();
-  });
 });
 document
   .getElementById("rank-back")
