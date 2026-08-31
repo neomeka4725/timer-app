@@ -226,7 +226,28 @@ async function cloudCheerChallenge(challengeId, from) {
   return true;
 }
 
-// 최근 응원을 한 번에 가져와서 도전별로 센다.
+// 내 도전에 달린 응원만 가져온다.
+// 집중하는 동안 1분마다 부르기 때문에 싸야 한다. 조건을 걸어서 내 것만
+// 받으면 문서 몇 개로 끝난다. (정렬을 붙이면 Firebase 가 추가 설정을
+// 요구하므로 붙이지 않는다)
+async function cloudLoadMyChallengeCheers(challengeId) {
+  const docs = await runQuery({
+    structuredQuery: {
+      from: [{ collectionId: COL_CHEERS }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: "challengeId" },
+          op: "EQUAL",
+          value: { stringValue: challengeId },
+        },
+      },
+      limit: 50,
+    },
+  });
+  return docs.map((d) => d.fields.from.stringValue);
+}
+
+// 최근 응원을 한 번에 가져와서 도전별로 모은다.
 // 도전마다 따로 물어보면 사람 수만큼 요청이 늘어난다.
 async function cloudLoadChallengeCheers() {
   const docs = await runQuery({
@@ -236,12 +257,14 @@ async function cloudLoadChallengeCheers() {
       limit: 100,
     },
   });
-  const counts = {};
+  // 누가 보냈는지도 같이 담는다. 세는 것만으로는 이름을 못 보여준다.
+  const byChallenge = {};
   docs.forEach((d) => {
     const key = d.fields.challengeId.stringValue;
-    counts[key] = (counts[key] || 0) + 1;
+    if (!byChallenge[key]) byChallenge[key] = [];
+    byChallenge[key].push(d.fields.from.stringValue);
   });
-  return counts;
+  return byChallenge;
 }
 
 // ---- 게시판 ----
