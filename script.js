@@ -834,9 +834,16 @@ function splitByHalf() {
 
 // ---- 화면을 벗어났을 때 ----
 // 전화가 오거나 알림을 잘못 눌러도 바로 실패하면 너무 억울하다.
-// 그래서 잠깐(5초) 안에 돌아오면 봐준다. 다만 횟수를 제한하고 화면에 알린다.
-
-const FORGIVE_SECONDS = 5;
+// 그래서 잠깐 안에 돌아오면 봐준다. 다만 횟수를 제한하고 화면에 알린다.
+//
+// 처음에는 5초였는데, 그 안에 돌아올 수 있는 건 알림창을 내렸다 올리는
+// 정도뿐이다. 알림을 눌러서 카톡이 열렸다가 돌아오면 이미 10초가 넘는다.
+// 그래서 "봐주기가 있다"고 써놓고 실제로는 아무도 못 봐주고 있었다.
+//
+// 30초로 늘리면서 아래에서 시계도 같이 멈춘다. 나가 있어도 시간이 안
+// 줄어드니까, 오래 나가 있어서 이득을 볼 방법은 없다. 늘려도 안전한 이유다.
+// 너무 후하다 싶으면 이 숫자만 줄이면 된다.
+const FORGIVE_SECONDS = 30;
 const FORGIVE_LIMIT = 3;
 
 let leftAt = 0; // 화면을 벗어난 시각
@@ -849,7 +856,7 @@ function showForgiveNote() {
   }
   const left = FORGIVE_LIMIT - forgiveCount;
   forgiveNote.textContent =
-    `😮‍💨 잠깐 나갔다 온 걸 ${forgiveCount}번 봐줬어요. ` +
+    `😮‍💨 잠깐 나갔다 온 걸 ${forgiveCount}번 봐줬어요. 그동안 타이머는 멈춰뒀어요. ` +
     (left > 0 ? `${left}번 더 봐줄 수 있어요.` : "다음엔 실패로 처리돼요.");
   forgiveNote.classList.remove("hidden");
 }
@@ -869,9 +876,33 @@ document.addEventListener("visibilitychange", () => {
 
   if (awaySeconds <= FORGIVE_SECONDS && forgiveCount < FORGIVE_LIMIT) {
     forgiveCount += 1;
+
+    // 봐주는 동안에는 시계도 멈춘다.
+    // 나가 있던 만큼 끝나는 시각을 뒤로 밀면, 돌아왔을 때 남은 시간이
+    // 나가기 전과 똑같아진다. 봐준다면서 시간은 그대로 깎으면 반쪽짜리다.
+    //
+    // 시계는 endTime(끝나야 하는 시각) 하나로만 굴러가므로, 여기만 밀면
+    // 카운트다운·링·성공 판정이 전부 따라온다.
+    endTime += Date.now() - leftAt;
+    remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+    // 다음 tick(0.25초)까지 기다리지 않고 바로 고쳐 그린다.
+    renderCountdown(remainingSeconds);
+    setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds);
+
     showForgiveNote();
-    // 나가 있는 동안 시간이 다 됐다면 이제 성공 처리한다.
-    if (remainingSeconds <= 0) finishTimer();
+
+    // 나가기 직전에 이미 시간이 다 됐던 경우다. 이제 성공 처리한다.
+    // (시계를 밀어도 지난 시각은 지난 시각이라 그대로 0이다)
+    // 반드시 도전을 다시 올리기 "전에" 확인한다. 끝나는 순간에 다시 올리면,
+    // finishTimer 가 지우는 것과 새로 만드는 것이 엇갈려서 유령 도전이
+    // 남을 수 있다. 예전에 실제로 겪은 문제와 같은 종류다.
+    if (remainingSeconds <= 0) {
+      finishTimer();
+      return;
+    }
+
+    // 목록에 올려둔 끝날 시각도 같이 민다.
+    extendChallenge();
     return;
   }
 
@@ -1123,6 +1154,9 @@ const MATES_SLOW_MS = 45 * 1000;
 const MATES_FAST_WINDOW_MS = 3 * 60 * 1000;
 // 이번 판의 열쇠. 판마다 달라서 지난 판의 응원이 따라오지 않는다.
 let myChallengeId = "";
+// 이번 판을 시작한 시각. 봐주기로 시계를 밀 때 도전을 다시 올리는 데 쓴다.
+// myChallengeId 와 같은 곳에서 같이 넣고 같이 지운다.
+let myChallengeStartedAt = 0;
 let lastCheerCount = 0;
 // 화면에 이름을 몇 개까지 늘어놓을지. 넘치면 "+3" 으로 접는다.
 const MATES_MAX_CHIPS = 6;
@@ -1146,6 +1180,7 @@ function stopMates() {
   cheerGot.classList.add("hidden");
   cheerGot.classList.remove("just-in");
   myChallengeId = "";
+  myChallengeStartedAt = 0;
   lastCheerCount = 0;
 }
 
@@ -1256,12 +1291,31 @@ function beginChallenge() {
   const startedAt = Date.now();
   // 도전 중 화면이 만드는 열쇠와 똑같은 방식으로 만든다.
   myChallengeId = nickname + "|" + startedAt;
+  myChallengeStartedAt = startedAt;
   lastCheerCount = 0;
   cloudStartChallenge({
     nickname: nickname,
     mission: missionInput.value.trim().slice(0, 20),
     goalMinutes: Math.round(goalSeconds / 60),
     startedAt: startedAt,
+    endAt: endTime,
+  }).catch(() => {});
+}
+
+// 봐주기로 시계를 뒤로 밀면, "지금 도전 중"에 올려둔 끝날 시각이 실제보다
+// 빨라진다. 그 시각이 지나면 다른 사람 화면이 내 도전을 지워버려서
+// 제일 힘든 마지막 순간에 목록에서 사라진다. 새 시각으로 다시 올린다.
+//
+// startedAt 은 반드시 그대로 둔다. 이게 바뀌면 응원을 붙이는 열쇠가
+// 달라져서, 이번 판에 받은 응원이 통째로 남의 판 것이 되어버린다.
+function extendChallenge() {
+  const nickname = loadNickname();
+  if (!nickname || myChallengeStartedAt === 0) return;
+  cloudStartChallenge({
+    nickname: nickname,
+    mission: missionInput.value.trim().slice(0, 20),
+    goalMinutes: Math.round(goalSeconds / 60),
+    startedAt: myChallengeStartedAt,
     endAt: endTime,
   }).catch(() => {});
 }

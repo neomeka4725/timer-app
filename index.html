@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=36 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=37 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=36" />
+  <link rel="manifest" href="manifest.json?v=37" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=36" />
+  <link rel="stylesheet" href="style.css?v=37" />
 </head>
 <body>
 
@@ -143,7 +143,8 @@
 
     <p class="notice">
       ⚠️ 타이머 중에 다른 앱이나 탭으로 나가면 실패로 처리돼요.<br />
-      단, <b>5초 안에</b> 돌아오면 3번까지 봐줍니다.
+      단, <b>30초 안에</b> 돌아오면 3번까지 봐줘요.<br />
+      봐주는 동안에는 <b>타이머도 같이 멈춥니다.</b>
     </p>
     <p class="notice warning hidden" id="wakelock-warning">
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
@@ -380,8 +381,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=36"></script>
-  <script src="cloud.js?v=36"></script>
-  <script src="script.js?v=36"></script>
+  <script src="storage.js?v=37"></script>
+  <script src="cloud.js?v=37"></script>
+  <script src="script.js?v=37"></script>
 </body>
 </html>
