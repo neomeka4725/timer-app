@@ -30,6 +30,9 @@ const focusMates = document.getElementById("focus-mates");
 const mateChips = document.getElementById("mate-chips");
 const cheerGot = document.getElementById("cheer-got");
 const cancelBtn = document.getElementById("cancel-btn");
+const pauseBtn = document.getElementById("pause-btn");
+const resumeBtn = document.getElementById("resume-btn");
+const pauseNote = document.getElementById("pause-note");
 const restartBtn = document.getElementById("restart-btn");
 
 const statSuccess = document.getElementById("stat-success");
@@ -97,6 +100,7 @@ let lastRecord = null; // 방금 끝낸 판 (게시판에 올릴 때 쓴다)
 // 여기에 달려 있어서, 이 값이 틀리면 억울한 실패가 생긴다.
 //   idle      : 타이머를 안 돌리는 중
 //   focus     : 집중 중 (화면을 벗어나면 실패)
+//   paused    : 잠깐 멈춘 중 (화면을 벗어나도 괜찮다. 시계도 안 흐른다)
 //   break     : 쉬는 중 (화면을 벗어나도 괜찮다)
 //   breakDone : 쉬는 시간이 끝나고 다음 집중을 기다리는 중
 let phase = "idle";
@@ -407,6 +411,9 @@ function startBreak() {
 
   cancelBtn.classList.add("hidden");
   restartBtn.classList.add("hidden");
+  // 쉬는 중에는 이미 폰을 봐도 되므로 멈추기가 필요 없다.
+  pauseBtn.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
   nextFocusBtn.textContent = "바로 집중 시작";
   nextFocusBtn.classList.remove("hidden");
   stopPomoBtn.classList.remove("hidden");
@@ -495,6 +502,9 @@ function showScreen(screen) {
   // 도전 중 화면을 떠나면 1초마다 도는 시계를 멈춘다.
   if (screen !== liveScreen) stopLiveTicker();
   if (screen !== timerScreen) stopMates();
+  // 타이머 화면을 떠난 뒤에 멈춤 시계가 돌면, 엉뚱한 화면에서 갑자기
+  // 포기로 처리해버린다. 화면을 옮길 때 반드시 내린다.
+  if (screen !== timerScreen) clearPauseTicker();
   // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
   if (screen === setupScreen) updateSplitWarning();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
@@ -635,6 +645,15 @@ function startTimer() {
   shareBox.classList.add("hidden");
   timerScreen.classList.remove("celebrate");
 
+  // 이번 판의 멈추기 횟수를 되살린다.
+  clearPauseTicker();
+  pauseCount = 0;
+  pausedAt = 0;
+  timerScreen.classList.remove("paused");
+  pauseNote.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
+  updatePauseButton();
+
   // 이번 판의 봐주기 횟수를 초기화한다.
   forgiveCount = 0;
   leftAt = 0;
@@ -648,6 +667,14 @@ function startTimer() {
   // 버튼을 누른 지금이 소리 장치를 깨울 수 있는 유일한 순간이다.
   wakeUpAudio();
 
+  startTicking();
+}
+
+// 0.25초마다 남은 시간을 다시 그린다.
+// 시작할 때와 "이어서 하기"에서 같이 쓴다. 두 곳에 같은 코드를 두면
+// 한쪽만 고치는 일이 생긴다.
+function startTicking() {
+  if (timerId !== null) clearInterval(timerId);
   timerId = setInterval(() => {
     remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
     renderCountdown(remainingSeconds);
@@ -662,6 +689,135 @@ function startTimer() {
   }, 250);
 }
 
+// ---- 잠깐 멈추기 ----
+//
+// 화장실에 가거나 전화를 받아야 할 때가 있다. 봐주기(30초)로는 모자라고,
+// 그렇다고 포기를 누르면 그때까지 한 게 다 날아간다.
+//
+// 멈춘 동안에는 시계가 안 흐르고, 화면을 벗어나도 실패가 아니다.
+// 대신 두 가지를 막아둔다. 이게 없으면 "멈춰놓고 딴짓하다 이어서 하기"로
+// 아무 때나 성공을 만들 수 있어서, 순위표와 티어가 실제 집중 시간을
+// 나타내지 못하게 된다.
+//   - 한 판에 2번까지
+//   - 한 번에 5분까지 (넘기면 포기로 처리)
+// 숫자를 바꾸려면 이 둘만 고치면 된다. 안내 문구도 자동으로 따라간다.
+const PAUSE_LIMIT = 2;
+const PAUSE_SECONDS = 5 * 60;
+
+let pauseCount = 0; // 이번 판에서 멈춘 횟수
+let pausedAt = 0; // 멈춘 시각
+let pauseEndTime = 0; // 이 시각까지 안 돌아오면 포기로 본다
+let pauseTickerId = null;
+
+function clearPauseTicker() {
+  if (pauseTickerId !== null) {
+    clearInterval(pauseTickerId);
+    pauseTickerId = null;
+  }
+}
+
+// 집중 중이고 아직 남은 횟수가 있을 때만 멈추기 버튼을 보여준다.
+function updatePauseButton() {
+  const canPause = phase === "focus" && pauseCount < PAUSE_LIMIT;
+  pauseBtn.classList.toggle("hidden", !canPause);
+  pauseBtn.textContent =
+    pauseCount === 0
+      ? "⏸️ 잠깐 멈추기"
+      : `⏸️ 잠깐 멈추기 (${PAUSE_LIMIT - pauseCount}번 남음)`;
+}
+
+function pauseTimer() {
+  // 버튼을 숨겨두긴 했지만, 여기서 한 번 더 막는다.
+  if (phase !== "focus" || pauseCount >= PAUSE_LIMIT) return;
+
+  pauseCount += 1;
+  phase = "paused";
+  pausedAt = Date.now();
+  pauseEndTime = pausedAt + PAUSE_SECONDS * 1000;
+
+  // 시계를 멈춘다. endTime 은 이어서 할 때 밀어준다.
+  clearInterval(timerId);
+  timerId = null;
+  // 폰을 보라고 멈춰준 것이므로 화면을 켜둘 이유가 없다.
+  releaseWakeLock();
+  setFocusMode(false);
+  timerScreen.classList.add("paused");
+  setRingSub("멈춤");
+
+  // 멈춰놓고 "집중 중"으로 떠 있으면 친구들에게 거짓말이 된다.
+  // 이번 판 열쇠(myChallengeId)는 그대로 둬야 이어서 할 때 같은 판으로
+  // 다시 올릴 수 있다. 그래서 stopMates() 가 아니라 시계만 멈춘다.
+  clearMatesTimer();
+  focusMates.classList.add("hidden");
+  mateChips.classList.add("hidden");
+  endChallenge();
+
+  runningLabel.textContent = "⏸️ 멈췄어요. 폰 봐도 괜찮아요";
+  resumeBtn.classList.remove("hidden");
+  updatePauseButton();
+
+  pauseTick();
+  pauseTickerId = setInterval(pauseTick, 250);
+}
+
+function pauseTick() {
+  const left = Math.max(0, Math.round((pauseEndTime - Date.now()) / 1000));
+  pauseNote.textContent =
+    `⏳ ${formatTime(left)} 안에 "이어서 하기"를 눌러주세요. ` +
+    "넘기면 포기로 기록돼요.";
+  pauseNote.classList.remove("hidden");
+
+  if (left <= 0) {
+    clearPauseTicker();
+    pauseNote.classList.add("hidden");
+    timerScreen.classList.remove("paused");
+    resumeBtn.classList.add("hidden");
+    // 멈춘 동안은 시계가 안 흘렀으므로, 여기까지 집중한 시간은
+    // 멈추기 직전 값 그대로다. giveUpTimer 가 그 값을 쓴다.
+    giveUpTimer();
+    runningLabel.textContent = "⏳ 멈춘 시간이 끝나서 포기로 기록했어요";
+  }
+}
+
+function resumeTimer() {
+  if (phase !== "paused") return;
+
+  // 멈춰 있는 사이에 화면을 나눠놓고 돌아올 수 있다.
+  // 시작하기 버튼에만 막이 있으면 여기가 뒷문이 된다.
+  if (splitViewInfo().split) {
+    runningLabel.textContent =
+      "🪟 화면을 나눠 쓰는 중이에요. 전체화면으로 바꾼 뒤 눌러주세요";
+    return;
+  }
+
+  clearPauseTicker();
+  // 멈춰 있던 만큼 끝나는 시각을 뒤로 민다. 봐주기와 같은 방식이다.
+  endTime += Date.now() - pausedAt;
+  phase = "focus";
+
+  pauseNote.classList.add("hidden");
+  timerScreen.classList.remove("paused");
+  resumeBtn.classList.add("hidden");
+  updatePauseButton();
+
+  setFocusMode(true);
+  setRingSub("남았어요");
+  // 멈추기를 다 썼으면 알려준다. 다음에 버튼을 찾다가 없어서 당황하지
+  // 않게 하려는 것이다.
+  runningLabel.textContent =
+    pauseCount >= PAUSE_LIMIT
+      ? "폰을 멀리하고 목표를 지켜보세요 (멈추기는 다 썼어요)"
+      : "폰을 멀리하고 목표를 지켜보세요";
+
+  // 같은 판(startedAt 그대로)으로 도전을 다시 올린다.
+  extendChallenge();
+  startMates();
+  requestWakeLock();
+  // 버튼을 누른 지금이 소리 장치를 다시 깨울 수 있는 순간이다.
+  wakeUpAudio();
+  startTicking();
+}
+
 // 타이머를 멈추고 기록을 남기는 공통 처리.
 // awaySeconds: 화면을 벗어나 있던 시간. 실제로 집중한 시간에서 빼야 한다.
 // 예를 들어 60분을 걸고 30분 나가 있다가 돌아오면 시계상으로는 30분이
@@ -670,6 +826,12 @@ function startTimer() {
 function stopTimer(result, awaySeconds) {
   clearInterval(timerId);
   timerId = null;
+  // 멈춘 채로 포기를 누르는 경우가 있다. 멈춤 시계도 같이 내린다.
+  clearPauseTicker();
+  timerScreen.classList.remove("paused");
+  pauseNote.classList.add("hidden");
+  pauseBtn.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
   releaseWakeLock();
   // 성공·실패·포기·화면 이탈이 모두 여기를 지나므로 한 곳에서 내린다.
   endChallenge();
@@ -862,6 +1024,12 @@ function showForgiveNote() {
 }
 
 document.addEventListener("visibilitychange", () => {
+  // 멈춰둔 중이면 나가 있어도 괜찮다. 돌아온 김에 남은 멈춤 시간만
+  // 다시 센다. 배경에 있는 동안에는 시계가 느려져서 늦게 알아차린다.
+  if (phase === "paused") {
+    if (!document.hidden) pauseTick();
+    return;
+  }
   // 쉬는 중이거나 타이머를 안 돌리는 중이면 나가도 괜찮다.
   if (phase !== "focus") return;
 
@@ -1027,7 +1195,8 @@ window.addEventListener("pagehide", () => {
 
 window.addEventListener("beforeunload", (event) => {
   // 쉬는 시간에 나가는 건 정상 행동이라 경고하지 않는다.
-  if (phase !== "focus") return;
+  // 멈춰둔 판은 아직 끝난 게 아니라서 닫으면 그대로 날아간다. 경고한다.
+  if (phase !== "focus" && phase !== "paused") return;
   event.preventDefault();
   // 옛날 브라우저는 이 값을 봐야 경고를 띄운다.
   event.returnValue = "";
@@ -1830,6 +1999,8 @@ startBtn.addEventListener("click", () => {
   startTimer();
 });
 cancelBtn.addEventListener("click", giveUpTimer);
+pauseBtn.addEventListener("click", pauseTimer);
+resumeBtn.addEventListener("click", resumeTimer);
 restartBtn.addEventListener("click", () => showScreen(setupScreen));
 
 statsBtn.addEventListener("click", () => {

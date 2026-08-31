@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=37 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=38 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=37" />
+  <link rel="manifest" href="manifest.json?v=38" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=37" />
+  <link rel="stylesheet" href="style.css?v=38" />
 </head>
 <body>
 
@@ -146,6 +146,11 @@
       단, <b>30초 안에</b> 돌아오면 3번까지 봐줘요.<br />
       봐주는 동안에는 <b>타이머도 같이 멈춥니다.</b>
     </p>
+    <p class="notice">
+      화장실처럼 오래 자리를 비울 땐 타이머 화면의
+      <b>⏸️ 잠깐 멈추기</b>를 눌러주세요. 멈춘 동안에는 폰을 봐도 되고
+      시간도 안 흘러요. <b>한 판에 2번, 한 번에 5분까지</b>입니다.
+    </p>
     <p class="notice warning hidden" id="wakelock-warning">
       이 기기는 화면 꺼짐 방지를 지원하지 않아요.<br />
       설정 → 디스플레이 및 밝기 → 자동 잠금을 <b>안 함</b>으로 바꿔주세요.
@@ -252,7 +257,11 @@
 
     <p class="running-label" id="running-label">폰을 멀리하고 목표를 지켜보세요</p>
     <p class="forgive-note hidden" id="forgive-note"></p>
+    <p class="pause-note hidden" id="pause-note"></p>
 
+    <!-- 멈춘 동안에는 이게 주인공이라 primary, 집중 중에는 숨어 있다. -->
+    <button type="button" id="resume-btn" class="primary-btn hidden">▶️ 이어서 하기</button>
+    <button type="button" id="pause-btn" class="secondary-btn">⏸️ 잠깐 멈추기</button>
     <button type="button" id="cancel-btn" class="secondary-btn">포기하기</button>
 
     <!-- 성공했을 때만 나오는 게시판 올리기 -->
@@ -381,8 +390,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=37"></script>
-  <script src="cloud.js?v=37"></script>
-  <script src="script.js?v=37"></script>
+  <script src="storage.js?v=38"></script>
+  <script src="cloud.js?v=38"></script>
+  <script src="script.js?v=38"></script>
 </body>
 </html>

@@ -933,6 +933,52 @@ body.focus-mode .cheer-got {
   stroke: #059669;
 }
 
+/* ---- 잠깐 멈춤 ---- */
+
+/* 멈춘 화면은 집중 중(어두움)과도, 쉬는 중(초록)과도 확실히 달라야 한다.
+   "지금 폰을 봐도 되는 상태인가"를 헷갈리면 억울한 실패가 생긴다.
+   쉬는 시간과 헷갈리지 않게 노란색을 쓴다. */
+#timer-screen.paused {
+  background: #fffbeb;
+  border: 2px solid #fcd34d;
+  border-radius: 20px;
+}
+
+#timer-screen.paused .countdown {
+  color: #b45309;
+}
+
+#timer-screen.paused .ring-track {
+  stroke: #fdeec4;
+}
+
+/* 멈춘 동안에는 링이 안 움직인다. 색도 흐리게 해서 "지금은 안 흐른다"가
+   보이게 한다. */
+#timer-screen.paused .ring-progress {
+  stroke: #f0b429;
+}
+
+#timer-screen.paused .ring-sub {
+  color: #b45309;
+}
+
+#timer-screen.paused .round-badge {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* 남은 멈춤 시간 안내. 봐주기 안내와 같은 모양이라 눈에 익다. */
+.pause-note {
+  margin: -4px 0 20px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .round-badge {
   display: inline-block;
   margin: 0 auto 12px;
