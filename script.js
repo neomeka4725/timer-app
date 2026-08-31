@@ -915,6 +915,15 @@ async function renderStats() {
 
 // 타이머가 도는 중에 새로고침하거나 탭을 닫으면 그때까지의 시간이 그냥 사라진다.
 // 실수로 그러는 일이 없도록 브라우저에게 한 번 물어봐 달라고 부탁한다.
+// 창을 닫거나 다른 곳으로 갈 때 도전을 내린다.
+// 사파리는 배경에 있는 페이지를 통째로 버릴 때가 있는데, 그러면 실패 처리
+// 코드가 아예 안 돌아서 "계속 집중 중"으로 남는다. 실제로 그 일이 있었다.
+window.addEventListener("pagehide", () => {
+  if (phase !== "focus") return;
+  const nickname = loadNickname();
+  if (nickname) cloudEndChallengeBeacon(nickname);
+});
+
 window.addEventListener("beforeunload", (event) => {
   // 쉬는 시간에 나가는 건 정상 행동이라 경고하지 않는다.
   if (phase !== "focus") return;
@@ -1096,7 +1105,15 @@ async function loadLive() {
       cloudLoadChallenges(),
       cloudLoadChallengeCheers().catch(() => ({})),
     ]);
-    liveItems = items;
+    // 나는 목록에서 뺀다.
+    // 집중 중에는 타이머 화면에 있으니 이 화면을 볼 수가 없다. 그래서
+    // 여기에 내가 보인다면 그건 지워지지 않고 남은 찌꺼기다.
+    // (앱이 갑자기 닫히거나 사파리가 페이지를 버리면 그렇게 된다)
+    const me = loadNickname();
+    const mine = items.filter((i) => i.nickname === me);
+    liveItems = items.filter((i) => i.nickname !== me);
+    // 내 찌꺼기를 발견했으면 조용히 치운다. 내 것이니 지워도 된다.
+    if (mine.length > 0) endChallenge();
     liveCheers = cheers;
     liveLoadedAt = Date.now();
     liveLoading = false;
@@ -1156,7 +1173,6 @@ function startLiveTicker() {
 function renderLive() {
   liveList.textContent = "";
 
-  const me = loadNickname();
   liveStatus.textContent = "현재 " + liveItems.length + "명이 집중 중";
 
   if (liveItems.length === 0) {
@@ -1171,7 +1187,6 @@ function renderLive() {
   liveItems.forEach((item) => {
     const card = document.createElement("div");
     card.className = "live-card";
-    if (item.nickname === me) card.classList.add("mine");
 
     const head = document.createElement("div");
     head.className = "live-head";
@@ -1216,19 +1231,17 @@ function renderLive() {
     count.textContent = "👏 " + (liveCheers[item.challengeId] || 0);
     row.appendChild(count);
 
-    if (item.nickname !== me) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "live-cheer";
-      if (alreadyCheered(item.challengeId)) {
-        btn.textContent = "응원함";
-        btn.disabled = true;
-      } else {
-        btn.textContent = "👏 응원하기";
-        btn.addEventListener("click", () => sendChallengeCheer(item, btn, count));
-      }
-      row.appendChild(btn);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "live-cheer";
+    if (alreadyCheered(item.challengeId)) {
+      btn.textContent = "응원함";
+      btn.disabled = true;
+    } else {
+      btn.textContent = "👏 응원하기";
+      btn.addEventListener("click", () => sendChallengeCheer(item, btn, count));
     }
+    row.appendChild(btn);
 
     card.appendChild(row);
     liveList.appendChild(card);
@@ -1703,6 +1716,16 @@ updateMinutesDisplay();
 updateSoundToggle();
 updatePomodoroToggle();
 
+// 앱을 열었다는 것은 집중 중이 아니라는 뜻이다. 그런데 내 도전이 남아
+// 있다면 지난번에 제대로 못 지운 것이다. 조용히 치운다.
+// 창을 닫을 때 보내는 것만으로는 부족하다. 사파리가 페이지를 버리면
+// 그 코드도 안 돌기 때문이다.
+function cleanUpMyStaleChallenge() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+  cloudEndChallenge(nickname).catch(() => {});
+}
+
 const savedNickname = loadNickname();
 if (savedNickname === "") {
   // 처음 온 사람에게는 닉네임부터 묻는다.
@@ -1710,5 +1733,6 @@ if (savedNickname === "") {
 } else {
   greetingName.textContent = savedNickname;
   showScreen(setupScreen);
+  cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
