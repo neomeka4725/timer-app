@@ -69,10 +69,18 @@ const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
 
+const tierMedal = document.getElementById("tier-medal");
 const tierBadge = document.getElementById("tier-badge");
 const tierTokens = document.getElementById("tier-tokens");
 const tierBarFill = document.getElementById("tier-bar-fill");
 const tierNext = document.getElementById("tier-next");
+
+const homeTier = document.getElementById("home-tier");
+const homeTierMedal = document.getElementById("home-tier-medal");
+const homeTierName = document.getElementById("home-tier-name");
+const homeTierTokens = document.getElementById("home-tier-tokens");
+const homeTierFill = document.getElementById("home-tier-fill");
+const homeTierNext = document.getElementById("home-tier-next");
 
 const liveScreen = document.getElementById("live-screen");
 const liveBtn = document.getElementById("live-btn");
@@ -692,6 +700,13 @@ function stopTimer(result, awaySeconds) {
     .then(() => markRecordSynced(record.at))
     .catch(() => {});
 
+  // 성공한 판만 토큰이 된다. 인터넷을 다시 보지 않고 이 기기 숫자에 더한다.
+  // 그래야 돌아가기를 눌렀을 때 첫 화면 티어가 바로 올라가 있다.
+  if (result === "success") {
+    bumpTokenCache(record.nickname, record.goalMinutes);
+    refreshHomeTier();
+  }
+
   cancelBtn.classList.add("hidden");
   restartBtn.classList.remove("hidden");
   lastRecord = record;
@@ -917,7 +932,12 @@ async function renderStats() {
   const records = result.records;
 
   // 토큰은 저장하지 않고 기록에서 계산한다.
-  renderTierInfo(calculateTokens(records));
+  const tokens = calculateTokens(records);
+  renderTierInfo(tokens);
+  // 여기서 나온 값이 가장 정확하다. 첫 화면이 쓰는 캐시를 이걸로 맞춰둔다.
+  // (다른 기기에서 한 판이 있어 어긋났더라도 여기서 바로잡힌다)
+  if (result.online) saveTokenCache(nickname, tokens);
+  renderHomeTier(tokens);
 
   if (result.online) {
     syncStatus.textContent = "☁️ 모든 기기의 기록을 합쳐서 보여주고 있어요";
@@ -986,20 +1006,74 @@ window.addEventListener("beforeunload", (event) => {
 // ---- 티어 ----
 // 토큰은 저장하지 않는다. 화면을 열 때마다 기록에서 다시 계산한다.
 
+// 뱃지 그림에 티어 색을 입힌다.
+// 색은 CSS 의 .tm-골드 같은 칸이 정한다. 여기서는 이름표만 갈아끼운다.
+// 이전 티어 이름표는 반드시 지워야 한다. 안 지우면 색이 겹쳐서
+// 먼저 쓰인 쪽이 계속 이긴다.
+function applyMedal(el, tier) {
+  if (!el) return;
+  el.className = "tier-medal tm-" + tier.key;
+}
+
+// 다음 티어까지 얼마나 남았는지 한 줄로 알려주는 문구.
+function tierNextText(info) {
+  if (info.isMax) return "🎉 최고 티어 달성";
+  return "다음 " + info.nextTier.name + "까지 " + info.needed + " 토큰";
+}
+
 function renderTierInfo(tokens) {
   const info = computeTierFromTokens(tokens);
 
-  tierBadge.textContent = info.tier.emoji + " " + info.tier.name;
+  applyMedal(tierMedal, info.tier);
+  tierBadge.textContent = info.tier.name;
   tierTokens.textContent = info.tokens + " 토큰";
   tierBarFill.style.width = info.progress + "%";
+  tierNext.textContent = tierNextText(info);
 
-  if (info.isMax) {
-    tierNext.textContent = "🎉 최고 티어 달성";
-  } else {
-    tierNext.textContent =
-      "다음 " + info.nextTier.name + "까지 " + info.needed + " 토큰";
-  }
   return info;
+}
+
+// ---- 첫 화면 티어 ----
+//
+// 앱을 열자마자 보이는 자리라, 인터넷을 기다리게 하면 안 된다.
+// 그래서 이 기기에 적어둔 토큰 수(캐시)를 바로 그린다.
+// 캐시가 없을 때만 딱 한 번 인터넷에서 받아온다.
+
+function renderHomeTier(tokens) {
+  const info = computeTierFromTokens(tokens);
+
+  applyMedal(homeTierMedal, info.tier);
+  homeTierName.textContent = info.tier.name;
+  homeTierTokens.textContent = info.tokens + " 토큰";
+  homeTierFill.style.width = info.progress + "%";
+  homeTierNext.textContent = tierNextText(info);
+
+  return info;
+}
+
+// 첫 화면 티어를 다시 그린다.
+// 캐시가 있으면 그것만 쓰고 끝낸다(인터넷 읽기 0회).
+// 캐시가 없으면 — 이 기기에서 처음 쓰거나 닉네임을 막 바꾼 경우다 —
+// 한 번만 받아와서 적어둔다.
+async function refreshHomeTier() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+
+  const cached = loadTokenCache(nickname);
+  if (cached !== null) {
+    renderHomeTier(cached);
+    return;
+  }
+
+  // 받아오는 동안에도 빈 칸으로 두지 않는다. 이 기기 기록만으로 먼저 그린다.
+  renderHomeTier(calculateTokens(loadRecords()));
+
+  const result = await collectRecords(nickname);
+  const tokens = calculateTokens(result.records);
+  renderHomeTier(tokens);
+  // 인터넷이 안 될 때 나온 값은 이 기기 기록만 센 것이라 실제보다 적다.
+  // 그걸 적어두면 계속 틀린 값을 쓰게 되므로 성공했을 때만 적는다.
+  if (result.online) saveTokenCache(nickname, tokens);
 }
 
 // ---- 지금 도전 중 ----
@@ -1022,7 +1096,7 @@ async function loadLiveTiers() {
     rows.forEach((row) => {
       const tokens = Math.round(row.totalSeconds / 60);
       const info = computeTierFromTokens(tokens);
-      map[row.nickname] = info.tier.emoji + " " + info.tier.name;
+      map[row.nickname] = info.tier;
     });
     liveTiers = map;
   } catch (err) {
@@ -1316,11 +1390,21 @@ function renderLive() {
     head.appendChild(name);
 
     // 티어는 순위표에서 이미 계산한 값을 쓴다. 없으면 비워둔다.
-    const tierName = liveTiers[item.nickname];
-    if (tierName) {
+    const tier = liveTiers[item.nickname];
+    if (tier) {
       const badge = document.createElement("span");
       badge.className = "live-tier";
-      badge.textContent = tierName;
+
+      const medal = document.createElement("span");
+      applyMedal(medal, tier);
+      medal.classList.add("small");
+      medal.setAttribute("aria-hidden", "true");
+
+      const label = document.createElement("span");
+      label.textContent = tier.name;
+
+      badge.appendChild(medal);
+      badge.appendChild(label);
       head.appendChild(badge);
     }
     card.appendChild(head);
@@ -1692,6 +1776,13 @@ statsBtn.addEventListener("click", () => {
   showScreen(statsScreen);
 });
 
+// 티어를 누르면 자세한 기록으로 넘어간다. 티어를 본 다음 궁금해지는 게
+// "얼마나 더 해야 하나"라서 가는 곳이 같다.
+homeTier.addEventListener("click", () => {
+  renderStats();
+  showScreen(statsScreen);
+});
+
 statsBackBtn.addEventListener("click", () => showScreen(setupScreen));
 statsBackTop.addEventListener("click", () => showScreen(setupScreen));
 
@@ -1802,6 +1893,8 @@ async function confirmNickname() {
     savePinHash(hash);
     greetingName.textContent = name;
     showScreen(setupScreen);
+    // 닉네임이 바뀌면 예전 토큰 캐시는 남의 것이 된다. 새로 받아온다.
+    refreshHomeTier();
     checkBoardUpdates();
   } catch (err) {
     if (err.status === 403) {
@@ -1857,6 +1950,7 @@ if (savedNickname === "") {
 } else {
   greetingName.textContent = savedNickname;
   showScreen(setupScreen);
+  refreshHomeTier();
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }

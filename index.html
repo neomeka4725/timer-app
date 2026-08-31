@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=34 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=35 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=34" />
+  <link rel="manifest" href="manifest.json?v=35" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=34" />
+  <link rel="stylesheet" href="style.css?v=35" />
 </head>
 <body>
 
@@ -74,6 +74,22 @@
   <!-- 화면 1: 목표 시간 설정 화면 -->
   <section id="setup-screen" class="screen hidden">
     <p class="greeting"><b id="greeting-name"></b>님, 안녕하세요</p>
+
+    <!-- 첫 화면 티어. 누르면 내 기록 화면으로 간다.
+         토큰 수는 이 기기에 적어둔 값을 바로 쓰기 때문에 인터넷을
+         안 봐도 뜬다. (storage.js 의 토큰 캐시) -->
+    <button type="button" id="home-tier" class="home-tier">
+      <span class="tier-medal tm-iron" id="home-tier-medal" aria-hidden="true"></span>
+      <span class="home-tier-main">
+        <span class="home-tier-top">
+          <b class="home-tier-name" id="home-tier-name"></b>
+          <span class="home-tier-tokens" id="home-tier-tokens"></span>
+        </span>
+        <span class="home-tier-bar"><span class="home-tier-fill" id="home-tier-fill"></span></span>
+        <small class="home-tier-next" id="home-tier-next"></small>
+      </span>
+    </button>
+
     <h1>📵 디지털 웰빙 타이머</h1>
     <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
 
@@ -295,6 +311,7 @@
     <!-- 티어. 토큰은 저장하지 않고 기록에서 계산한다. -->
     <div class="tier-box" id="tier-box">
       <div class="tier-head">
+        <span class="tier-medal tm-iron" id="tier-medal" aria-hidden="true"></span>
         <span class="tier-badge" id="tier-badge"></span>
         <span class="tier-tokens" id="tier-tokens"></span>
       </div>
@@ -365,8 +382,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=34"></script>
-  <script src="cloud.js?v=34"></script>
-  <script src="script.js?v=34"></script>
+  <script src="storage.js?v=35"></script>
+  <script src="cloud.js?v=35"></script>
+  <script src="script.js?v=35"></script>
 </body>
 </html>
