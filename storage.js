@@ -217,14 +217,19 @@ function calculateTokens(records) {
 }
 
 // 낮은 티어부터 차례대로. 마지막이 최고 티어다.
+//
+// key 는 뱃지 색을 고르는 CSS 이름이다. style.css 의 .tm-아이언 같은 칸과
+// 짝이 맞아야 한다. 한글을 CSS 이름으로 쓰면 브라우저마다 말썽이라서
+// 영어 이름을 따로 둔다.
+// emoji 는 뱃지 그림을 못 그리는 곳(공유 문구 등)에서만 쓰는 대비용이다.
 const TIERS = [
-  { name: "아이언", min: 0, emoji: "⬜" },
-  { name: "브론즈", min: 100, emoji: "🟫" },
-  { name: "실버", min: 300, emoji: "⬛" },
-  { name: "골드", min: 600, emoji: "🟨" },
-  { name: "플래티넘", min: 1000, emoji: "🟦" },
-  { name: "다이아", min: 1500, emoji: "💎" },
-  { name: "마스터", min: 2500, emoji: "👑" },
+  { key: "iron", name: "아이언", min: 0, emoji: "⬜" },
+  { key: "bronze", name: "브론즈", min: 100, emoji: "🟫" },
+  { key: "silver", name: "실버", min: 300, emoji: "⬛" },
+  { key: "gold", name: "골드", min: 600, emoji: "🟨" },
+  { key: "plat", name: "플래티넘", min: 1000, emoji: "🟦" },
+  { key: "dia", name: "다이아", min: 1500, emoji: "💎" },
+  { key: "master", name: "마스터", min: 2500, emoji: "👑" },
 ];
 
 // 토큰 수로 지금 티어와 다음 티어를 구한다.
@@ -263,6 +268,56 @@ function computeTierFromTokens(tokens) {
     progress: Math.max(0, Math.min(100, Math.round((done / span) * 100))),
     isMax: false,
   };
+}
+
+// ---- 토큰 캐시 ----
+//
+// 첫 화면에 티어를 띄우려면 토큰 수가 필요한데, 그때마다 인터넷에서
+// 기록을 통째로 받아오면 Firebase 읽기 횟수가 확 늘어난다.
+// 그래서 마지막으로 계산한 값을 이 기기에 적어두고 바로 보여준다.
+//
+// 토큰은 "내가 한 판을 끝냈을 때"만 늘어난다. 그래서 판이 끝날 때마다
+// 이 숫자에 더해주면 인터넷을 안 봐도 계속 맞는다.
+// 혹시 다른 기기에서 한 게 있어 어긋나더라도, 내 기록 화면을 열면
+// 진짜 값으로 다시 맞춰진다.
+//
+// 닉네임을 같이 적어두는 이유: 닉네임을 바꿨는데 예전 토큰이 그대로
+// 남아 있으면 남의 티어를 달고 있는 꼴이 된다.
+const TOKENS_KEY = "wellness-timer-tokens";
+
+function loadTokenCache(nickname) {
+  try {
+    const raw = localStorage.getItem(TOKENS_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.nickname !== nickname) return null;
+    const n = Number(saved.tokens);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveTokenCache(nickname, tokens) {
+  if (!nickname) return;
+  try {
+    localStorage.setItem(
+      TOKENS_KEY,
+      JSON.stringify({ nickname: nickname, tokens: Math.max(0, Math.round(tokens)) })
+    );
+  } catch (err) {
+    // 못 적어도 화면에는 이번 값이 그대로 보인다.
+  }
+}
+
+// 판이 끝났을 때 토큰을 더한다. 아직 캐시가 없으면 아무것도 하지 않는다.
+// (없는 상태에서 더하면 0부터 시작해 실제보다 훨씬 적은 값이 되어버린다)
+function bumpTokenCache(nickname, addMinutes) {
+  const now = loadTokenCache(nickname);
+  if (now === null) return null;
+  const next = now + Math.max(0, Math.round(addMinutes));
+  saveTokenCache(nickname, next);
+  return next;
 }
 
 // 기록 목록에서 통계를 계산한다.

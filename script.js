@@ -30,6 +30,9 @@ const focusMates = document.getElementById("focus-mates");
 const mateChips = document.getElementById("mate-chips");
 const cheerGot = document.getElementById("cheer-got");
 const cancelBtn = document.getElementById("cancel-btn");
+const pauseBtn = document.getElementById("pause-btn");
+const resumeBtn = document.getElementById("resume-btn");
+const pauseNote = document.getElementById("pause-note");
 const restartBtn = document.getElementById("restart-btn");
 
 const statSuccess = document.getElementById("stat-success");
@@ -57,7 +60,6 @@ const rankScreen = document.getElementById("rank-screen");
 const rankBtn = document.getElementById("rank-btn");
 const rankStatus = document.getElementById("rank-status");
 const rankList = document.getElementById("rank-list");
-const rankSortButtons = document.querySelectorAll(".rank-sort");
 
 const soundToggle = document.getElementById("sound-toggle");
 const soundTest = document.getElementById("sound-test");
@@ -69,10 +71,18 @@ const forgiveNote = document.getElementById("forgive-note");
 const boardDot = document.getElementById("board-dot");
 const installTip = document.getElementById("install-tip");
 
+const tierMedal = document.getElementById("tier-medal");
 const tierBadge = document.getElementById("tier-badge");
 const tierTokens = document.getElementById("tier-tokens");
 const tierBarFill = document.getElementById("tier-bar-fill");
 const tierNext = document.getElementById("tier-next");
+
+const homeTier = document.getElementById("home-tier");
+const homeTierMedal = document.getElementById("home-tier-medal");
+const homeTierName = document.getElementById("home-tier-name");
+const homeTierTokens = document.getElementById("home-tier-tokens");
+const homeTierFill = document.getElementById("home-tier-fill");
+const homeTierNext = document.getElementById("home-tier-next");
 
 const liveScreen = document.getElementById("live-screen");
 const liveBtn = document.getElementById("live-btn");
@@ -90,6 +100,7 @@ let lastRecord = null; // 방금 끝낸 판 (게시판에 올릴 때 쓴다)
 // 여기에 달려 있어서, 이 값이 틀리면 억울한 실패가 생긴다.
 //   idle      : 타이머를 안 돌리는 중
 //   focus     : 집중 중 (화면을 벗어나면 실패)
+//   paused    : 잠깐 멈춘 중 (화면을 벗어나도 괜찮다. 시계도 안 흐른다)
 //   break     : 쉬는 중 (화면을 벗어나도 괜찮다)
 //   breakDone : 쉬는 시간이 끝나고 다음 집중을 기다리는 중
 let phase = "idle";
@@ -400,6 +411,9 @@ function startBreak() {
 
   cancelBtn.classList.add("hidden");
   restartBtn.classList.add("hidden");
+  // 쉬는 중에는 이미 폰을 봐도 되므로 멈추기가 필요 없다.
+  pauseBtn.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
   nextFocusBtn.textContent = "바로 집중 시작";
   nextFocusBtn.classList.remove("hidden");
   stopPomoBtn.classList.remove("hidden");
@@ -488,6 +502,9 @@ function showScreen(screen) {
   // 도전 중 화면을 떠나면 1초마다 도는 시계를 멈춘다.
   if (screen !== liveScreen) stopLiveTicker();
   if (screen !== timerScreen) stopMates();
+  // 타이머 화면을 떠난 뒤에 멈춤 시계가 돌면, 엉뚱한 화면에서 갑자기
+  // 포기로 처리해버린다. 화면을 옮길 때 반드시 내린다.
+  if (screen !== timerScreen) clearPauseTicker();
   // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
   if (screen === setupScreen) updateSplitWarning();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
@@ -628,6 +645,15 @@ function startTimer() {
   shareBox.classList.add("hidden");
   timerScreen.classList.remove("celebrate");
 
+  // 이번 판의 멈추기 횟수를 되살린다.
+  clearPauseTicker();
+  pauseCount = 0;
+  pausedAt = 0;
+  timerScreen.classList.remove("paused");
+  pauseNote.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
+  updatePauseButton();
+
   // 이번 판의 봐주기 횟수를 초기화한다.
   forgiveCount = 0;
   leftAt = 0;
@@ -641,6 +667,14 @@ function startTimer() {
   // 버튼을 누른 지금이 소리 장치를 깨울 수 있는 유일한 순간이다.
   wakeUpAudio();
 
+  startTicking();
+}
+
+// 0.25초마다 남은 시간을 다시 그린다.
+// 시작할 때와 "이어서 하기"에서 같이 쓴다. 두 곳에 같은 코드를 두면
+// 한쪽만 고치는 일이 생긴다.
+function startTicking() {
+  if (timerId !== null) clearInterval(timerId);
   timerId = setInterval(() => {
     remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
     renderCountdown(remainingSeconds);
@@ -655,6 +689,135 @@ function startTimer() {
   }, 250);
 }
 
+// ---- 잠깐 멈추기 ----
+//
+// 화장실에 가거나 전화를 받아야 할 때가 있다. 봐주기(30초)로는 모자라고,
+// 그렇다고 포기를 누르면 그때까지 한 게 다 날아간다.
+//
+// 멈춘 동안에는 시계가 안 흐르고, 화면을 벗어나도 실패가 아니다.
+// 대신 두 가지를 막아둔다. 이게 없으면 "멈춰놓고 딴짓하다 이어서 하기"로
+// 아무 때나 성공을 만들 수 있어서, 순위표와 티어가 실제 집중 시간을
+// 나타내지 못하게 된다.
+//   - 한 판에 2번까지
+//   - 한 번에 5분까지 (넘기면 포기로 처리)
+// 숫자를 바꾸려면 이 둘만 고치면 된다. 안내 문구도 자동으로 따라간다.
+const PAUSE_LIMIT = 2;
+const PAUSE_SECONDS = 5 * 60;
+
+let pauseCount = 0; // 이번 판에서 멈춘 횟수
+let pausedAt = 0; // 멈춘 시각
+let pauseEndTime = 0; // 이 시각까지 안 돌아오면 포기로 본다
+let pauseTickerId = null;
+
+function clearPauseTicker() {
+  if (pauseTickerId !== null) {
+    clearInterval(pauseTickerId);
+    pauseTickerId = null;
+  }
+}
+
+// 집중 중이고 아직 남은 횟수가 있을 때만 멈추기 버튼을 보여준다.
+function updatePauseButton() {
+  const canPause = phase === "focus" && pauseCount < PAUSE_LIMIT;
+  pauseBtn.classList.toggle("hidden", !canPause);
+  pauseBtn.textContent =
+    pauseCount === 0
+      ? "⏸️ 잠깐 멈추기"
+      : `⏸️ 잠깐 멈추기 (${PAUSE_LIMIT - pauseCount}번 남음)`;
+}
+
+function pauseTimer() {
+  // 버튼을 숨겨두긴 했지만, 여기서 한 번 더 막는다.
+  if (phase !== "focus" || pauseCount >= PAUSE_LIMIT) return;
+
+  pauseCount += 1;
+  phase = "paused";
+  pausedAt = Date.now();
+  pauseEndTime = pausedAt + PAUSE_SECONDS * 1000;
+
+  // 시계를 멈춘다. endTime 은 이어서 할 때 밀어준다.
+  clearInterval(timerId);
+  timerId = null;
+  // 폰을 보라고 멈춰준 것이므로 화면을 켜둘 이유가 없다.
+  releaseWakeLock();
+  setFocusMode(false);
+  timerScreen.classList.add("paused");
+  setRingSub("멈춤");
+
+  // 멈춰놓고 "집중 중"으로 떠 있으면 친구들에게 거짓말이 된다.
+  // 이번 판 열쇠(myChallengeId)는 그대로 둬야 이어서 할 때 같은 판으로
+  // 다시 올릴 수 있다. 그래서 stopMates() 가 아니라 시계만 멈춘다.
+  clearMatesTimer();
+  focusMates.classList.add("hidden");
+  mateChips.classList.add("hidden");
+  endChallenge();
+
+  runningLabel.textContent = "⏸️ 멈췄어요. 폰 봐도 괜찮아요";
+  resumeBtn.classList.remove("hidden");
+  updatePauseButton();
+
+  pauseTick();
+  pauseTickerId = setInterval(pauseTick, 250);
+}
+
+function pauseTick() {
+  const left = Math.max(0, Math.round((pauseEndTime - Date.now()) / 1000));
+  pauseNote.textContent =
+    `⏳ ${formatTime(left)} 안에 "이어서 하기"를 눌러주세요. ` +
+    "넘기면 포기로 기록돼요.";
+  pauseNote.classList.remove("hidden");
+
+  if (left <= 0) {
+    clearPauseTicker();
+    pauseNote.classList.add("hidden");
+    timerScreen.classList.remove("paused");
+    resumeBtn.classList.add("hidden");
+    // 멈춘 동안은 시계가 안 흘렀으므로, 여기까지 집중한 시간은
+    // 멈추기 직전 값 그대로다. giveUpTimer 가 그 값을 쓴다.
+    giveUpTimer();
+    runningLabel.textContent = "⏳ 멈춘 시간이 끝나서 포기로 기록했어요";
+  }
+}
+
+function resumeTimer() {
+  if (phase !== "paused") return;
+
+  // 멈춰 있는 사이에 화면을 나눠놓고 돌아올 수 있다.
+  // 시작하기 버튼에만 막이 있으면 여기가 뒷문이 된다.
+  if (splitViewInfo().split) {
+    runningLabel.textContent =
+      "🪟 화면을 나눠 쓰는 중이에요. 전체화면으로 바꾼 뒤 눌러주세요";
+    return;
+  }
+
+  clearPauseTicker();
+  // 멈춰 있던 만큼 끝나는 시각을 뒤로 민다. 봐주기와 같은 방식이다.
+  endTime += Date.now() - pausedAt;
+  phase = "focus";
+
+  pauseNote.classList.add("hidden");
+  timerScreen.classList.remove("paused");
+  resumeBtn.classList.add("hidden");
+  updatePauseButton();
+
+  setFocusMode(true);
+  setRingSub("남았어요");
+  // 멈추기를 다 썼으면 알려준다. 다음에 버튼을 찾다가 없어서 당황하지
+  // 않게 하려는 것이다.
+  runningLabel.textContent =
+    pauseCount >= PAUSE_LIMIT
+      ? "폰을 멀리하고 목표를 지켜보세요 (멈추기는 다 썼어요)"
+      : "폰을 멀리하고 목표를 지켜보세요";
+
+  // 같은 판(startedAt 그대로)으로 도전을 다시 올린다.
+  extendChallenge();
+  startMates();
+  requestWakeLock();
+  // 버튼을 누른 지금이 소리 장치를 다시 깨울 수 있는 순간이다.
+  wakeUpAudio();
+  startTicking();
+}
+
 // 타이머를 멈추고 기록을 남기는 공통 처리.
 // awaySeconds: 화면을 벗어나 있던 시간. 실제로 집중한 시간에서 빼야 한다.
 // 예를 들어 60분을 걸고 30분 나가 있다가 돌아오면 시계상으로는 30분이
@@ -663,6 +826,12 @@ function startTimer() {
 function stopTimer(result, awaySeconds) {
   clearInterval(timerId);
   timerId = null;
+  // 멈춘 채로 포기를 누르는 경우가 있다. 멈춤 시계도 같이 내린다.
+  clearPauseTicker();
+  timerScreen.classList.remove("paused");
+  pauseNote.classList.add("hidden");
+  pauseBtn.classList.add("hidden");
+  resumeBtn.classList.add("hidden");
   releaseWakeLock();
   // 성공·실패·포기·화면 이탈이 모두 여기를 지나므로 한 곳에서 내린다.
   endChallenge();
@@ -691,6 +860,13 @@ function stopTimer(result, awaySeconds) {
   cloudSaveRecord(record)
     .then(() => markRecordSynced(record.at))
     .catch(() => {});
+
+  // 성공한 판만 토큰이 된다. 인터넷을 다시 보지 않고 이 기기 숫자에 더한다.
+  // 그래야 돌아가기를 눌렀을 때 첫 화면 티어가 바로 올라가 있다.
+  if (result === "success") {
+    bumpTokenCache(record.nickname, record.goalMinutes);
+    refreshHomeTier();
+  }
 
   cancelBtn.classList.add("hidden");
   restartBtn.classList.remove("hidden");
@@ -820,9 +996,16 @@ function splitByHalf() {
 
 // ---- 화면을 벗어났을 때 ----
 // 전화가 오거나 알림을 잘못 눌러도 바로 실패하면 너무 억울하다.
-// 그래서 잠깐(5초) 안에 돌아오면 봐준다. 다만 횟수를 제한하고 화면에 알린다.
-
-const FORGIVE_SECONDS = 5;
+// 그래서 잠깐 안에 돌아오면 봐준다. 다만 횟수를 제한하고 화면에 알린다.
+//
+// 처음에는 5초였는데, 그 안에 돌아올 수 있는 건 알림창을 내렸다 올리는
+// 정도뿐이다. 알림을 눌러서 카톡이 열렸다가 돌아오면 이미 10초가 넘는다.
+// 그래서 "봐주기가 있다"고 써놓고 실제로는 아무도 못 봐주고 있었다.
+//
+// 30초로 늘리면서 아래에서 시계도 같이 멈춘다. 나가 있어도 시간이 안
+// 줄어드니까, 오래 나가 있어서 이득을 볼 방법은 없다. 늘려도 안전한 이유다.
+// 너무 후하다 싶으면 이 숫자만 줄이면 된다.
+const FORGIVE_SECONDS = 30;
 const FORGIVE_LIMIT = 3;
 
 let leftAt = 0; // 화면을 벗어난 시각
@@ -835,12 +1018,18 @@ function showForgiveNote() {
   }
   const left = FORGIVE_LIMIT - forgiveCount;
   forgiveNote.textContent =
-    `😮‍💨 잠깐 나갔다 온 걸 ${forgiveCount}번 봐줬어요. ` +
+    `😮‍💨 잠깐 나갔다 온 걸 ${forgiveCount}번 봐줬어요. 그동안 타이머는 멈춰뒀어요. ` +
     (left > 0 ? `${left}번 더 봐줄 수 있어요.` : "다음엔 실패로 처리돼요.");
   forgiveNote.classList.remove("hidden");
 }
 
 document.addEventListener("visibilitychange", () => {
+  // 멈춰둔 중이면 나가 있어도 괜찮다. 돌아온 김에 남은 멈춤 시간만
+  // 다시 센다. 배경에 있는 동안에는 시계가 느려져서 늦게 알아차린다.
+  if (phase === "paused") {
+    if (!document.hidden) pauseTick();
+    return;
+  }
   // 쉬는 중이거나 타이머를 안 돌리는 중이면 나가도 괜찮다.
   if (phase !== "focus") return;
 
@@ -855,9 +1044,33 @@ document.addEventListener("visibilitychange", () => {
 
   if (awaySeconds <= FORGIVE_SECONDS && forgiveCount < FORGIVE_LIMIT) {
     forgiveCount += 1;
+
+    // 봐주는 동안에는 시계도 멈춘다.
+    // 나가 있던 만큼 끝나는 시각을 뒤로 밀면, 돌아왔을 때 남은 시간이
+    // 나가기 전과 똑같아진다. 봐준다면서 시간은 그대로 깎으면 반쪽짜리다.
+    //
+    // 시계는 endTime(끝나야 하는 시각) 하나로만 굴러가므로, 여기만 밀면
+    // 카운트다운·링·성공 판정이 전부 따라온다.
+    endTime += Date.now() - leftAt;
+    remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+    // 다음 tick(0.25초)까지 기다리지 않고 바로 고쳐 그린다.
+    renderCountdown(remainingSeconds);
+    setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds);
+
     showForgiveNote();
-    // 나가 있는 동안 시간이 다 됐다면 이제 성공 처리한다.
-    if (remainingSeconds <= 0) finishTimer();
+
+    // 나가기 직전에 이미 시간이 다 됐던 경우다. 이제 성공 처리한다.
+    // (시계를 밀어도 지난 시각은 지난 시각이라 그대로 0이다)
+    // 반드시 도전을 다시 올리기 "전에" 확인한다. 끝나는 순간에 다시 올리면,
+    // finishTimer 가 지우는 것과 새로 만드는 것이 엇갈려서 유령 도전이
+    // 남을 수 있다. 예전에 실제로 겪은 문제와 같은 종류다.
+    if (remainingSeconds <= 0) {
+      finishTimer();
+      return;
+    }
+
+    // 목록에 올려둔 끝날 시각도 같이 민다.
+    extendChallenge();
     return;
   }
 
@@ -917,7 +1130,12 @@ async function renderStats() {
   const records = result.records;
 
   // 토큰은 저장하지 않고 기록에서 계산한다.
-  renderTierInfo(calculateTokens(records));
+  const tokens = calculateTokens(records);
+  renderTierInfo(tokens);
+  // 여기서 나온 값이 가장 정확하다. 첫 화면이 쓰는 캐시를 이걸로 맞춰둔다.
+  // (다른 기기에서 한 판이 있어 어긋났더라도 여기서 바로잡힌다)
+  if (result.online) saveTokenCache(nickname, tokens);
+  renderHomeTier(tokens);
 
   if (result.online) {
     syncStatus.textContent = "☁️ 모든 기기의 기록을 합쳐서 보여주고 있어요";
@@ -977,7 +1195,8 @@ window.addEventListener("pagehide", () => {
 
 window.addEventListener("beforeunload", (event) => {
   // 쉬는 시간에 나가는 건 정상 행동이라 경고하지 않는다.
-  if (phase !== "focus") return;
+  // 멈춰둔 판은 아직 끝난 게 아니라서 닫으면 그대로 날아간다. 경고한다.
+  if (phase !== "focus" && phase !== "paused") return;
   event.preventDefault();
   // 옛날 브라우저는 이 값을 봐야 경고를 띄운다.
   event.returnValue = "";
@@ -986,20 +1205,74 @@ window.addEventListener("beforeunload", (event) => {
 // ---- 티어 ----
 // 토큰은 저장하지 않는다. 화면을 열 때마다 기록에서 다시 계산한다.
 
+// 뱃지 그림에 티어 색을 입힌다.
+// 색은 CSS 의 .tm-골드 같은 칸이 정한다. 여기서는 이름표만 갈아끼운다.
+// 이전 티어 이름표는 반드시 지워야 한다. 안 지우면 색이 겹쳐서
+// 먼저 쓰인 쪽이 계속 이긴다.
+function applyMedal(el, tier) {
+  if (!el) return;
+  el.className = "tier-medal tm-" + tier.key;
+}
+
+// 다음 티어까지 얼마나 남았는지 한 줄로 알려주는 문구.
+function tierNextText(info) {
+  if (info.isMax) return "🎉 최고 티어 달성";
+  return "다음 " + info.nextTier.name + "까지 " + info.needed + " 토큰";
+}
+
 function renderTierInfo(tokens) {
   const info = computeTierFromTokens(tokens);
 
-  tierBadge.textContent = info.tier.emoji + " " + info.tier.name;
+  applyMedal(tierMedal, info.tier);
+  tierBadge.textContent = info.tier.name;
   tierTokens.textContent = info.tokens + " 토큰";
   tierBarFill.style.width = info.progress + "%";
+  tierNext.textContent = tierNextText(info);
 
-  if (info.isMax) {
-    tierNext.textContent = "🎉 최고 티어 달성";
-  } else {
-    tierNext.textContent =
-      "다음 " + info.nextTier.name + "까지 " + info.needed + " 토큰";
-  }
   return info;
+}
+
+// ---- 첫 화면 티어 ----
+//
+// 앱을 열자마자 보이는 자리라, 인터넷을 기다리게 하면 안 된다.
+// 그래서 이 기기에 적어둔 토큰 수(캐시)를 바로 그린다.
+// 캐시가 없을 때만 딱 한 번 인터넷에서 받아온다.
+
+function renderHomeTier(tokens) {
+  const info = computeTierFromTokens(tokens);
+
+  applyMedal(homeTierMedal, info.tier);
+  homeTierName.textContent = info.tier.name;
+  homeTierTokens.textContent = info.tokens + " 토큰";
+  homeTierFill.style.width = info.progress + "%";
+  homeTierNext.textContent = tierNextText(info);
+
+  return info;
+}
+
+// 첫 화면 티어를 다시 그린다.
+// 캐시가 있으면 그것만 쓰고 끝낸다(인터넷 읽기 0회).
+// 캐시가 없으면 — 이 기기에서 처음 쓰거나 닉네임을 막 바꾼 경우다 —
+// 한 번만 받아와서 적어둔다.
+async function refreshHomeTier() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+
+  const cached = loadTokenCache(nickname);
+  if (cached !== null) {
+    renderHomeTier(cached);
+    return;
+  }
+
+  // 받아오는 동안에도 빈 칸으로 두지 않는다. 이 기기 기록만으로 먼저 그린다.
+  renderHomeTier(calculateTokens(loadRecords()));
+
+  const result = await collectRecords(nickname);
+  const tokens = calculateTokens(result.records);
+  renderHomeTier(tokens);
+  // 인터넷이 안 될 때 나온 값은 이 기기 기록만 센 것이라 실제보다 적다.
+  // 그걸 적어두면 계속 틀린 값을 쓰게 되므로 성공했을 때만 적는다.
+  if (result.online) saveTokenCache(nickname, tokens);
 }
 
 // ---- 지금 도전 중 ----
@@ -1022,7 +1295,7 @@ async function loadLiveTiers() {
     rows.forEach((row) => {
       const tokens = Math.round(row.totalSeconds / 60);
       const info = computeTierFromTokens(tokens);
-      map[row.nickname] = info.tier.emoji + " " + info.tier.name;
+      map[row.nickname] = info.tier;
     });
     liveTiers = map;
   } catch (err) {
@@ -1050,6 +1323,9 @@ const MATES_SLOW_MS = 45 * 1000;
 const MATES_FAST_WINDOW_MS = 3 * 60 * 1000;
 // 이번 판의 열쇠. 판마다 달라서 지난 판의 응원이 따라오지 않는다.
 let myChallengeId = "";
+// 이번 판을 시작한 시각. 봐주기로 시계를 밀 때 도전을 다시 올리는 데 쓴다.
+// myChallengeId 와 같은 곳에서 같이 넣고 같이 지운다.
+let myChallengeStartedAt = 0;
 let lastCheerCount = 0;
 // 화면에 이름을 몇 개까지 늘어놓을지. 넘치면 "+3" 으로 접는다.
 const MATES_MAX_CHIPS = 6;
@@ -1073,6 +1349,7 @@ function stopMates() {
   cheerGot.classList.add("hidden");
   cheerGot.classList.remove("just-in");
   myChallengeId = "";
+  myChallengeStartedAt = 0;
   lastCheerCount = 0;
 }
 
@@ -1183,12 +1460,33 @@ function beginChallenge() {
   const startedAt = Date.now();
   // 도전 중 화면이 만드는 열쇠와 똑같은 방식으로 만든다.
   myChallengeId = nickname + "|" + startedAt;
+  myChallengeStartedAt = startedAt;
   lastCheerCount = 0;
   cloudStartChallenge({
     nickname: nickname,
     mission: missionInput.value.trim().slice(0, 20),
-    goalMinutes: Math.round(goalSeconds / 60),
+    // Firebase 규칙이 1 이상만 받는다. 1분보다 짧은 판도 막히지 않게 한다.
+    goalMinutes: Math.max(1, Math.round(goalSeconds / 60)),
     startedAt: startedAt,
+    endAt: endTime,
+  }).catch(() => {});
+}
+
+// 봐주기로 시계를 뒤로 밀면, "지금 도전 중"에 올려둔 끝날 시각이 실제보다
+// 빨라진다. 그 시각이 지나면 다른 사람 화면이 내 도전을 지워버려서
+// 제일 힘든 마지막 순간에 목록에서 사라진다. 새 시각으로 다시 올린다.
+//
+// startedAt 은 반드시 그대로 둔다. 이게 바뀌면 응원을 붙이는 열쇠가
+// 달라져서, 이번 판에 받은 응원이 통째로 남의 판 것이 되어버린다.
+function extendChallenge() {
+  const nickname = loadNickname();
+  if (!nickname || myChallengeStartedAt === 0) return;
+  cloudStartChallenge({
+    nickname: nickname,
+    mission: missionInput.value.trim().slice(0, 20),
+    // Firebase 규칙이 1 이상만 받는다. 1분보다 짧은 판도 막히지 않게 한다.
+    goalMinutes: Math.max(1, Math.round(goalSeconds / 60)),
+    startedAt: myChallengeStartedAt,
     endAt: endTime,
   }).catch(() => {});
 }
@@ -1316,11 +1614,21 @@ function renderLive() {
     head.appendChild(name);
 
     // 티어는 순위표에서 이미 계산한 값을 쓴다. 없으면 비워둔다.
-    const tierName = liveTiers[item.nickname];
-    if (tierName) {
+    const tier = liveTiers[item.nickname];
+    if (tier) {
       const badge = document.createElement("span");
       badge.className = "live-tier";
-      badge.textContent = tierName;
+
+      const medal = document.createElement("span");
+      applyMedal(medal, tier);
+      medal.classList.add("small");
+      medal.setAttribute("aria-hidden", "true");
+
+      const label = document.createElement("span");
+      label.textContent = tier.name;
+
+      badge.appendChild(medal);
+      badge.appendChild(label);
       head.appendChild(badge);
     }
     card.appendChild(head);
@@ -1606,8 +1914,10 @@ async function sharePost() {
 }
 
 // ---- 순위표 ----
-
-let rankSort = "count";
+//
+// 기준은 누적 집중 시간 하나뿐이다. 성공 횟수로도 줄을 세울 수 있게
+// 해뒀었는데, 그러면 1분짜리를 스무 번 한 사람이 50분씩 열 번 한 사람보다
+// 위로 간다. 이 앱이 늘리고 싶은 건 횟수가 아니라 집중한 시간이다.
 
 async function renderRank() {
   rankStatus.textContent = "불러오는 중…";
@@ -1631,13 +1941,12 @@ async function renderRank() {
     return;
   }
 
-  rows.sort((a, b) =>
-    rankSort === "count"
-      ? b.successCount - a.successCount || b.totalSeconds - a.totalSeconds
-      : b.totalSeconds - a.totalSeconds || b.successCount - a.successCount
+  // 시간이 같으면 성공 횟수로 가른다.
+  rows.sort(
+    (a, b) => b.totalSeconds - a.totalSeconds || b.successCount - a.successCount
   );
 
-  rankStatus.textContent = "모두 " + rows.length + "명";
+  rankStatus.textContent = "모두 " + rows.length + "명 · 누적 집중 시간 순";
   const me = loadNickname();
 
   rows.forEach((row, index) => {
@@ -1648,25 +1957,32 @@ async function renderRank() {
     no.className = "rank-no";
     no.textContent = index + 1;
 
+    // 티어는 여기 있는 자료로 바로 계산한다. 순위표의 누적 시간은 성공한
+    // 판만 더한 값이라, 분으로 바꾸면 토큰과 같은 숫자가 된다.
+    // 이걸 위해 따로 불러오는 것은 없다. 읽기가 늘지 않는다.
+    const info = computeTierFromTokens(Math.round(row.totalSeconds / 60));
+
+    const medal = document.createElement("span");
+    applyMedal(medal, info.tier);
+    medal.classList.add("small");
+    medal.setAttribute("aria-hidden", "true");
+
     const name = document.createElement("span");
     name.className = "rank-name";
     name.textContent = row.nickname;
+
     const sub = document.createElement("span");
     sub.className = "rank-sub";
-    sub.textContent =
-      rankSort === "count"
-        ? formatDuration(row.totalSeconds) + " 집중"
-        : row.successCount + "번 성공";
+    // 뱃지는 그림이라 눈이 안 보이는 사람에게는 안 읽힌다.
+    // 티어 이름을 글자로 같이 적어둔다.
+    sub.textContent = info.tier.name + " · " + row.successCount + "번 성공";
     name.appendChild(sub);
 
     const value = document.createElement("span");
     value.className = "rank-value";
-    value.textContent =
-      rankSort === "count"
-        ? row.successCount + "번"
-        : formatDuration(row.totalSeconds);
+    value.textContent = formatDuration(row.totalSeconds);
 
-    li.append(no, name, value);
+    li.append(no, medal, name, value);
     rankList.appendChild(li);
   });
 }
@@ -1685,9 +2001,18 @@ startBtn.addEventListener("click", () => {
   startTimer();
 });
 cancelBtn.addEventListener("click", giveUpTimer);
+pauseBtn.addEventListener("click", pauseTimer);
+resumeBtn.addEventListener("click", resumeTimer);
 restartBtn.addEventListener("click", () => showScreen(setupScreen));
 
 statsBtn.addEventListener("click", () => {
+  renderStats();
+  showScreen(statsScreen);
+});
+
+// 티어를 누르면 자세한 기록으로 넘어간다. 티어를 본 다음 궁금해지는 게
+// "얼마나 더 해야 하나"라서 가는 곳이 같다.
+homeTier.addEventListener("click", () => {
   renderStats();
   showScreen(statsScreen);
 });
@@ -1714,13 +2039,6 @@ document
 rankBtn.addEventListener("click", () => {
   showScreen(rankScreen);
   renderRank();
-});
-rankSortButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    rankSort = btn.dataset.sort;
-    rankSortButtons.forEach((b) => b.classList.toggle("active", b === btn));
-    renderRank();
-  });
 });
 document
   .getElementById("rank-back")
@@ -1802,6 +2120,8 @@ async function confirmNickname() {
     savePinHash(hash);
     greetingName.textContent = name;
     showScreen(setupScreen);
+    // 닉네임이 바뀌면 예전 토큰 캐시는 남의 것이 된다. 새로 받아온다.
+    refreshHomeTier();
     checkBoardUpdates();
   } catch (err) {
     if (err.status === 403) {
@@ -1857,6 +2177,41 @@ if (savedNickname === "") {
 } else {
   greetingName.textContent = savedNickname;
   showScreen(setupScreen);
+  refreshHomeTier();
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
+
+// ▼▼▼ 개발용 · 다 만들면 이 덩어리를 통째로 지울 것 ▼▼▼
+// (index.html 의 dev-quick-btn 한 줄, style.css 의 .dev-btn 덩어리도 같이)
+//
+// 10분짜리를 걸어놓고 기다리면서 시험할 수가 없어서 넣었다.
+// 평소대로 startTimer() 로 시작한 뒤, 이번 판만 15초로 줄인다.
+// 이렇게 하면 startTimer() 안을 하나도 안 건드려서, 지울 때 이 덩어리만
+// 지우면 원래대로 돌아온다.
+//
+// 주의 1: 기록에는 "1분 목표"로 남는다. Firebase 규칙이 goalMinutes 를
+//         1 이상 정수로만 받기 때문이다. 15초 성공도 1토큰이 된다.
+// 주의 2: 이 버튼이 올라가 있는 동안에는 반 친구들도 누를 수 있다.
+//         누른 만큼 성공 횟수와 토큰이 늘어난다. 그래서 빼야 한다.
+const DEV_TEST_SECONDS = 15;
+
+document.getElementById("dev-quick-btn").addEventListener("click", () => {
+  // 나눠쓰기 막이는 시작하기 버튼 쪽에 있다. 여기가 뒷문이 되면 안 된다.
+  if (updateSplitWarning()) {
+    splitWarning.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
+  startTimer();
+  // 이미 집중 중이면 startTimer 가 아무것도 안 하고 돌아간다.
+  if (phase !== "focus") return;
+
+  goalSeconds = DEV_TEST_SECONDS;
+  endTime = Date.now() + DEV_TEST_SECONDS * 1000;
+  remainingSeconds = DEV_TEST_SECONDS;
+  renderCountdown(remainingSeconds);
+  setRing(1);
+  // "지금 도전 중" 목록에 올라간 남은 시간도 새 값으로 맞춘다.
+  extendChallenge();
+});
+// ▲▲▲ 개발용 여기까지 ▲▲▲

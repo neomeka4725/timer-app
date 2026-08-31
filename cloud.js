@@ -37,7 +37,10 @@ function fetchWithTimeout(url, options) {
 function toFields(record) {
   return {
     nickname: { stringValue: record.nickname },
-    goalMinutes: { integerValue: String(Math.round(record.goalMinutes)) },
+    // Firebase 규칙이 goalMinutes 를 "1 이상 정수"로 못박아 뒀다.
+    // 1분보다 짧은 판(개발용 15초 시험 등)이 0으로 내려가면 규칙에 막혀서
+    // 기록이 조용히 안 올라간다. 최소 1로 올린다.
+    goalMinutes: { integerValue: String(Math.max(1, Math.round(record.goalMinutes))) },
     elapsedSeconds: { integerValue: String(Math.round(record.elapsedSeconds)) },
     result: { stringValue: record.result },
     at: { timestampValue: new Date(record.at).toISOString() },
