@@ -156,6 +156,44 @@ body.focus-mode .focus-mates {
   color: rgba(255, 255, 255, 0.45);
 }
 
+/* 같이 집중 중인 사람 이름표.
+   이름만 짧게 놓는다. 미션이나 남은 시간까지 넣으면 읽을거리가 되어버린다. */
+.mate-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 18px;
+}
+
+.mate-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mate-chip.more {
+  background: #f1f2f6;
+  color: #8a93a6;
+}
+
+body.focus-mode .mate-chip {
+  background: rgba(125, 151, 255, 0.16);
+  color: #a8bbff;
+}
+
+body.focus-mode .mate-chip.more {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.45);
+}
+
 /* ---- 남은 시간 링 ---- */
 /* 숫자를 읽지 않아도 얼마나 남았는지 한눈에 보이게 하는 동그란 막대. */
 
@@ -1191,8 +1229,9 @@ body.focus-mode .ring-sub {
   /* 타이머: 멀리서 보는 화면이라 크게. 가로로 눕히면 높이가 모자라므로
      화면 높이에 맞춰 줄어들게 한다. */
   .ring-wrap {
-    max-width: min(460px, 52vh);
-    margin-bottom: 28px;
+    /* 이름표 줄이 하나 더 들어가므로 가로로 누웠을 때 링을 조금 줄인다 */
+    max-width: min(460px, 46vh);
+    margin-bottom: 24px;
   }
 
   .countdown {
