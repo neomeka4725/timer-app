@@ -71,6 +71,30 @@ h1 {
   margin-bottom: 8px;
 }
 
+/* 목표 시간을 직접 치는 칸. 큰 숫자 그대로 보이되 눌러서 고칠 수 있다는
+   것을 알 수 있도록 밑줄을 옅게 깔았다. */
+.minutes-input {
+  width: 2ch;
+  padding: 0;
+  border: none;
+  border-bottom: 2px dashed #d7ddee;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.minutes-input:focus {
+  outline: none;
+  border-bottom-color: #4c6fff;
+}
+
 .time-display .unit {
   font-size: 1.5rem;
   font-weight: 500;

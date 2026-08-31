@@ -102,14 +102,64 @@ let goalSeconds = 0; // 이번 판의 목표 시간(초)
 let endTime = 0; // 끝나야 하는 시각
 let remainingSeconds = 0;
 
+const MIN_MINUTES = 1;
+// 120분보다 크게 두면 Firebase 규칙이 기록을 거부한다. 둘을 같이 고칠 것.
+const MAX_MINUTES = 120;
+
+// 칸이 숫자 길이에 딱 맞게 줄었다 늘었다 하게 한다.
+// 고정 너비로 두면 "10분"일 때 가운데가 안 맞아 보인다.
+function fitMinutesInput() {
+  const len = Math.max(1, minutesValue.value.length);
+  minutesValue.style.width = len + "ch";
+}
+
 function updateMinutesDisplay() {
-  minutesValue.textContent = minutesSlider.value;
+  minutesValue.value = minutesSlider.value;
+  fitMinutesInput();
   quickButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.minutes === minutesSlider.value);
   });
 }
 
 minutesSlider.addEventListener("input", updateMinutesDisplay);
+
+// ---- 숫자를 직접 치기 ----
+
+// 치는 동안에는 비어 있어도 그냥 둔다. 바로 1로 고쳐버리면 지우고 새로
+// 칠 수가 없다. 대신 칸을 벗어날 때와 시작할 때 바로잡는다.
+minutesValue.addEventListener("input", () => {
+  const digits = minutesValue.value.replace(/\D/g, "").slice(0, 3);
+  const capped =
+    digits === "" ? "" : String(Math.min(MAX_MINUTES, Number(digits)));
+  minutesValue.value = capped;
+  fitMinutesInput();
+
+  if (capped !== "" && Number(capped) >= MIN_MINUTES) {
+    minutesSlider.value = capped;
+    quickButtons.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.minutes === capped);
+    });
+  }
+});
+
+// 칸을 벗어나면 빈 칸이나 0을 정상 값으로 되돌린다.
+function commitMinutes() {
+  const n = Number(minutesValue.value);
+  if (!minutesValue.value || !Number.isFinite(n) || n < MIN_MINUTES) {
+    minutesSlider.value = String(Math.max(MIN_MINUTES, Number(minutesSlider.value) || MIN_MINUTES));
+  }
+  updateMinutesDisplay();
+}
+
+minutesValue.addEventListener("blur", commitMinutes);
+
+// 누르면 전체가 선택돼서 바로 새로 칠 수 있다.
+minutesValue.addEventListener("focus", () => minutesValue.select());
+
+// 엔터를 누르면 자판을 닫는다.
+minutesValue.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") minutesValue.blur();
+});
 
 quickButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -1554,6 +1604,8 @@ async function renderRank() {
 startBtn.addEventListener("click", () => {
   // 나눠 쓰는 중에 시작하면 옆에서 뭘 하든 성공으로 끝난다.
   // 아예 시작하지 않고 이유를 알려준다.
+  // 자판이 열린 채로 눌릴 수 있다. 빈 칸이면 먼저 바로잡는다.
+  commitMinutes();
   if (updateSplitWarning()) {
     splitWarning.scrollIntoView({ block: "center", behavior: "smooth" });
     return;
