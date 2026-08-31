@@ -27,6 +27,7 @@ const countdownEl = document.getElementById("countdown");
 const ringProgress = document.getElementById("ring-progress");
 const ringSub = document.getElementById("ring-sub");
 const focusMates = document.getElementById("focus-mates");
+const mateChips = document.getElementById("mate-chips");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
@@ -975,9 +976,13 @@ async function loadLiveTiers() {
 // 타이머 화면에 "몇 명이 함께 하는지"만 보여준다. 혼자가 아니라는 걸
 // 아는 것만으로 조금 더 버티게 된다.
 //
-// 목록이나 버튼은 일부러 넣지 않았다. 집중하라고 만든 화면에서 남의 카드를
-// 읽고 있으면 앞뒤가 안 맞는다. 자세히 보고 싶으면 "🔥 도전 중" 화면이 있다.
+// 이름까지 보여준다. 숫자보다 아는 사람 이름이 뜨는 쪽이 훨씬 힘이 된다.
+// 다만 이름만 짧게 놓고 미션이나 남은 시간, 버튼은 넣지 않는다.
+// 읽을거리가 많아지면 집중하라는 화면에서 남의 카드를 읽고 있게 된다.
+// 자세히 보고 싶으면 "🔥 도전 중" 화면이 따로 있다.
 const MATES_REFRESH_MS = 2 * 60 * 1000;
+// 화면에 이름을 몇 개까지 늘어놓을지. 넘치면 "+3" 으로 접는다.
+const MATES_MAX_CHIPS = 6;
 let matesTimerId = null;
 
 function stopMates() {
@@ -986,6 +991,27 @@ function stopMates() {
     matesTimerId = null;
   }
   focusMates.classList.add("hidden");
+  mateChips.classList.add("hidden");
+  mateChips.textContent = "";
+}
+
+// 이름표를 그린다. 이름은 남이 지은 값이라 textContent 로만 넣는다.
+function renderMateChips(names) {
+  mateChips.textContent = "";
+  names.slice(0, MATES_MAX_CHIPS).forEach((name) => {
+    const chip = document.createElement("span");
+    chip.className = "mate-chip";
+    chip.textContent = name;
+    mateChips.appendChild(chip);
+  });
+  const rest = names.length - MATES_MAX_CHIPS;
+  if (rest > 0) {
+    const more = document.createElement("span");
+    more.className = "mate-chip more";
+    more.textContent = "+" + rest;
+    mateChips.appendChild(more);
+  }
+  mateChips.classList.remove("hidden");
 }
 
 async function refreshMates() {
@@ -995,18 +1021,25 @@ async function refreshMates() {
   try {
     const items = await cloudLoadChallenges();
     // 나는 빼고 센다. "함께"라는 말과 맞아야 한다.
-    const others = items.filter((i) => i.nickname !== me).length;
+    const others = items.filter((i) => i.nickname !== me);
     // 도중에 판이 끝났으면 건드리지 않는다.
     if (phase !== "focus") return;
-    if (others === 0) {
+    if (others.length === 0) {
       focusMates.classList.add("hidden");
+      mateChips.classList.add("hidden");
       return;
     }
-    focusMates.textContent = "🔥 " + others + "명이 함께 집중 중";
+    // 오래 남은 사람부터 보여준다. 곧 끝날 사람보다 오래 같이 있을 사람이다.
+    const names = others
+      .sort((a, b) => b.endAt - a.endAt)
+      .map((i) => i.nickname);
+    focusMates.textContent = "🔥 " + names.length + "명이 함께 집중 중";
     focusMates.classList.remove("hidden");
+    renderMateChips(names);
   } catch (err) {
     // 못 불러와도 타이머는 그대로다. 아무것도 안 보여준다.
     focusMates.classList.add("hidden");
+    mateChips.classList.add("hidden");
   }
 }
 
