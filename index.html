@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=31 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=32 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=31" />
+  <link rel="manifest" href="manifest.json?v=32" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=31" />
+  <link rel="stylesheet" href="style.css?v=32" />
 </head>
 <body>
 
@@ -83,7 +83,18 @@
     <div class="pad-col">
 
     <div class="time-display">
-      <span id="minutes-value">10</span><span class="unit">분</span>
+      <!-- 숫자를 직접 칠 수 있다. 슬라이더로 40분 같은 값을 맞추기는 어렵다.
+           inputmode="numeric" 은 폰에서 숫자 자판이 바로 뜨게 한다. -->
+      <input
+        type="text"
+        id="minutes-value"
+        class="minutes-input"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="3"
+        value="10"
+        aria-label="목표 시간(분)"
+      /><span class="unit">분</span>
     </div>
 
     <input
@@ -352,8 +363,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=31"></script>
-  <script src="cloud.js?v=31"></script>
-  <script src="script.js?v=31"></script>
+  <script src="storage.js?v=32"></script>
+  <script src="cloud.js?v=32"></script>
+  <script src="script.js?v=32"></script>
 </body>
 </html>

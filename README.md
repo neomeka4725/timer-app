@@ -20,6 +20,10 @@
   Swift 같은 특정 OS 전용 앱은 만들지 않는다
 - 회원가입·로그인이 없다. **닉네임 + 숫자 4자리**만 입력해서 쓴다
 
+> **목표 시간 상한(120분)은 두 곳에 있다.** `script.js` 의 `MAX_MINUTES` 와
+> `firestore.rules` 의 `goalMinutes <= 120`. 하나만 고치면 기록이 조용히
+> 거부된다. 반드시 같이 고칠 것.
+
 ### 아이패드에서 조심할 것
 
 화면을 반으로 나눠 쓰면(Split View) 두 앱이 같이 보여서 **화면 이탈 감지가
@@ -63,14 +67,14 @@
 `index.html` 맨 위와 맨 아래에 이렇게 되어 있다.
 
 ```html
-<link rel="stylesheet" href="style.css?v=31" />
-<script src="storage.js?v=31"></script>
-<script src="cloud.js?v=31"></script>
-<script src="script.js?v=31"></script>
+<link rel="stylesheet" href="style.css?v=32" />
+<script src="storage.js?v=32"></script>
+<script src="cloud.js?v=32"></script>
+<script src="script.js?v=32"></script>
 ```
 
-`?v=31`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
-**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=32`).
+`?v=32`는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시다.
+**CSS나 JS를 고쳤으면 이 숫자를 전부 같은 값으로 하나 올려야 한다** (`?v=33`).
 
 안 올리면 어떻게 되나: 사파리가 예전 `script.js`를 그대로 쓴다. 새 버튼은
 화면에 보이는데 눌러도 아무 반응이 없다. 원인을 찾기 매우 어렵다.
