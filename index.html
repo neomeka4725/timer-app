@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=32 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=33 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=32" />
+  <link rel="manifest" href="manifest.json?v=33" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=32" />
+  <link rel="stylesheet" href="style.css?v=33" />
 </head>
 <body>
 
@@ -217,6 +217,8 @@
          목록을 넣으면 집중하라는 화면에서 남의 카드를 읽게 된다. -->
     <p class="focus-mates hidden" id="focus-mates"></p>
     <div class="mate-chips hidden" id="mate-chips"></div>
+    <!-- 친구가 보낸 응원이 도착하면 여기 뜬다. 힘들 때 버티는 데 쓰인다. -->
+    <p class="cheer-got hidden" id="cheer-got"></p>
 
     <!-- 남은 시간 링. 숫자를 안 읽어도 얼마나 남았는지 한눈에 보인다.
          두께와 색만 CSS가 정하고, 얼마나 채울지는 script.js가 정한다. -->
@@ -363,8 +365,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=32"></script>
-  <script src="cloud.js?v=32"></script>
-  <script src="script.js?v=32"></script>
+  <script src="storage.js?v=33"></script>
+  <script src="cloud.js?v=33"></script>
+  <script src="script.js?v=33"></script>
 </body>
 </html>

@@ -28,6 +28,7 @@ const ringProgress = document.getElementById("ring-progress");
 const ringSub = document.getElementById("ring-sub");
 const focusMates = document.getElementById("focus-mates");
 const mateChips = document.getElementById("mate-chips");
+const cheerGot = document.getElementById("cheer-got");
 const cancelBtn = document.getElementById("cancel-btn");
 const restartBtn = document.getElementById("restart-btn");
 
@@ -1039,19 +1040,60 @@ async function loadLiveTiers() {
 // 다만 이름만 짧게 놓고 미션이나 남은 시간, 버튼은 넣지 않는다.
 // 읽을거리가 많아지면 집중하라는 화면에서 남의 카드를 읽고 있게 된다.
 // 자세히 보고 싶으면 "🔥 도전 중" 화면이 따로 있다.
-const MATES_REFRESH_MS = 2 * 60 * 1000;
+// 응원이 늦게 도착하면 힘이 안 된다. 1분마다 본다.
+// 내 응원만 조건을 걸어 가져오므로 문서 몇 개로 끝난다.
+const MATES_REFRESH_MS = 60 * 1000;
+// 이번 판의 열쇠. 판마다 달라서 지난 판의 응원이 따라오지 않는다.
+let myChallengeId = "";
+let lastCheerCount = 0;
 // 화면에 이름을 몇 개까지 늘어놓을지. 넘치면 "+3" 으로 접는다.
 const MATES_MAX_CHIPS = 6;
 let matesTimerId = null;
 
-function stopMates() {
+// 시계만 멈춘다. 판이 끝난 게 아니라 다시 시작하는 경우에 쓴다.
+function clearMatesTimer() {
   if (matesTimerId !== null) {
     clearInterval(matesTimerId);
     matesTimerId = null;
   }
+}
+
+// 판이 끝났을 때. 화면을 치우고 이번 판의 열쇠도 버린다.
+function stopMates() {
+  clearMatesTimer();
   focusMates.classList.add("hidden");
   mateChips.classList.add("hidden");
   mateChips.textContent = "";
+  cheerGot.classList.add("hidden");
+  cheerGot.classList.remove("just-in");
+  myChallengeId = "";
+  lastCheerCount = 0;
+}
+
+// 받은 응원을 보여준다. 누가 보냈는지가 숫자보다 힘이 된다.
+function renderCheerGot(names) {
+  if (names.length === 0) {
+    cheerGot.classList.add("hidden");
+    return;
+  }
+  let text;
+  if (names.length === 1) {
+    text = "👏 " + names[0] + "님이 응원했어요";
+  } else if (names.length === 2) {
+    text = "👏 " + names[0] + ", " + names[1] + "님이 응원했어요";
+  } else {
+    text = "👏 " + names[0] + " 외 " + (names.length - 1) + "명이 응원했어요";
+  }
+  cheerGot.textContent = text;
+  cheerGot.classList.remove("hidden");
+
+  // 새로 온 응원일 때만 한 번 반짝인다. 매번 흔들리면 집중에 방해된다.
+  if (names.length > lastCheerCount) {
+    cheerGot.classList.remove("just-in");
+    void cheerGot.offsetWidth;
+    cheerGot.classList.add("just-in");
+  }
+  lastCheerCount = names.length;
 }
 
 // 이름표를 그린다. 이름은 남이 지은 값이라 textContent 로만 넣는다.
@@ -1078,7 +1120,14 @@ async function refreshMates() {
   if (phase !== "focus") return;
   const me = loadNickname();
   try {
-    const items = await cloudLoadChallenges();
+    // 함께하는 사람과 내가 받은 응원을 같이 가져온다.
+    const [items, myCheers] = await Promise.all([
+      cloudLoadChallenges(),
+      myChallengeId
+        ? cloudLoadMyChallengeCheers(myChallengeId).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    if (phase === "focus" && myCheers) renderCheerGot(myCheers);
     // 나는 빼고 센다. "함께"라는 말과 맞아야 한다.
     const others = items.filter((i) => i.nickname !== me);
     // 도중에 판이 끝났으면 건드리지 않는다.
@@ -1103,7 +1152,9 @@ async function refreshMates() {
 }
 
 function startMates() {
-  stopMates();
+  // stopMates() 를 부르면 방금 만든 이번 판의 열쇠까지 지워진다.
+  // 여기서는 시계만 새로 건다.
+  clearMatesTimer();
   refreshMates();
   matesTimerId = setInterval(() => {
     // 화면을 안 보고 있으면 굳이 불러오지 않는다.
@@ -1114,11 +1165,15 @@ function startMates() {
 function beginChallenge() {
   const nickname = loadNickname();
   if (!nickname) return;
+  const startedAt = Date.now();
+  // 도전 중 화면이 만드는 열쇠와 똑같은 방식으로 만든다.
+  myChallengeId = nickname + "|" + startedAt;
+  lastCheerCount = 0;
   cloudStartChallenge({
     nickname: nickname,
     mission: missionInput.value.trim().slice(0, 20),
     goalMinutes: Math.round(goalSeconds / 60),
-    startedAt: Date.now(),
+    startedAt: startedAt,
     endAt: endTime,
   }).catch(() => {});
 }
@@ -1278,7 +1333,7 @@ function renderLive() {
 
     const count = document.createElement("span");
     count.className = "live-count";
-    count.textContent = "👏 " + (liveCheers[item.challengeId] || 0);
+    count.textContent = "👏 " + (liveCheers[item.challengeId] || []).length;
     row.appendChild(count);
 
     const btn = document.createElement("button");
@@ -1304,8 +1359,10 @@ async function sendChallengeCheer(item, btn, countEl) {
   try {
     await cloudCheerChallenge(item.challengeId, loadNickname());
     markCheered(item.challengeId);
-    liveCheers[item.challengeId] = (liveCheers[item.challengeId] || 0) + 1;
-    countEl.textContent = "👏 " + liveCheers[item.challengeId];
+    const sent = liveCheers[item.challengeId] || [];
+    sent.push(loadNickname());
+    liveCheers[item.challengeId] = sent;
+    countEl.textContent = "👏 " + sent.length;
     btn.textContent = "응원함";
   } catch (err) {
     btn.disabled = false;
