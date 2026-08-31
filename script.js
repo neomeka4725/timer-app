@@ -1040,20 +1040,26 @@ async function loadLiveTiers() {
 // 다만 이름만 짧게 놓고 미션이나 남은 시간, 버튼은 넣지 않는다.
 // 읽을거리가 많아지면 집중하라는 화면에서 남의 카드를 읽고 있게 된다.
 // 자세히 보고 싶으면 "🔥 도전 중" 화면이 따로 있다.
-// 응원이 늦게 도착하면 힘이 안 된다. 1분마다 본다.
-// 내 응원만 조건을 걸어 가져오므로 문서 몇 개로 끝난다.
-const MATES_REFRESH_MS = 60 * 1000;
+// 사람들은 야자 시작할 때처럼 비슷한 때에 몰려서 시작한다. 그래서 판이
+// 막 시작한 동안에는 자주 보고, 시간이 지나면 뜸하게 본다.
+//
+// 계속 10초마다 보면 반 전체가 켰을 때 무료 요금제 읽기가 금방 없어진다.
+// (보는 사람 수 × 도전 수 만큼 읽기 때문에 사람이 늘면 제곱으로 늘어난다)
+const MATES_FAST_MS = 10 * 1000;
+const MATES_SLOW_MS = 45 * 1000;
+const MATES_FAST_WINDOW_MS = 3 * 60 * 1000;
 // 이번 판의 열쇠. 판마다 달라서 지난 판의 응원이 따라오지 않는다.
 let myChallengeId = "";
 let lastCheerCount = 0;
 // 화면에 이름을 몇 개까지 늘어놓을지. 넘치면 "+3" 으로 접는다.
 const MATES_MAX_CHIPS = 6;
 let matesTimerId = null;
+let matesStartedAt = 0;
 
 // 시계만 멈춘다. 판이 끝난 게 아니라 다시 시작하는 경우에 쓴다.
 function clearMatesTimer() {
   if (matesTimerId !== null) {
-    clearInterval(matesTimerId);
+    clearTimeout(matesTimerId);
     matesTimerId = null;
   }
 }
@@ -1155,11 +1161,20 @@ function startMates() {
   // stopMates() 를 부르면 방금 만든 이번 판의 열쇠까지 지워진다.
   // 여기서는 시계만 새로 건다.
   clearMatesTimer();
+  matesStartedAt = Date.now();
   refreshMates();
-  matesTimerId = setInterval(() => {
+  scheduleMates();
+}
+
+// 다음에 언제 볼지 매번 다시 정한다. 그래서 setInterval 이 아니라
+// setTimeout 을 이어 건다.
+function scheduleMates() {
+  const early = Date.now() - matesStartedAt < MATES_FAST_WINDOW_MS;
+  matesTimerId = setTimeout(() => {
     // 화면을 안 보고 있으면 굳이 불러오지 않는다.
     if (!document.hidden) refreshMates();
-  }, MATES_REFRESH_MS);
+    if (phase === "focus") scheduleMates();
+  }, early ? MATES_FAST_MS : MATES_SLOW_MS);
 }
 
 function beginChallenge() {
@@ -1243,7 +1258,7 @@ async function loadLive() {
 // 1분마다 목록을 다시 불러온다. 열어둔 사이에 새로 시작한 사람이
 // 안 보이면 "지금 도전 중"이라는 이름이 무색해진다.
 // 화면을 안 보고 있을 때는 읽지 않는다. (무료 요금제 읽기를 아낀다)
-const LIVE_RELOAD_MS = 60 * 1000;
+const LIVE_RELOAD_MS = 20 * 1000;
 let liveLoadedAt = 0;
 // 불러오는 데 1초가 넘게 걸리면 시계가 또 부르려 든다. 한 번에 하나만.
 let liveLoading = false;
