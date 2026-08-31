@@ -119,6 +119,21 @@ async function postDoc(path, fields) {
 // 있어야 동작한다. 규칙이 없으면 403이 나는데, 그때도 타이머 자체는
 // 그대로 돌아가야 하므로 부르는 쪽에서 실패를 무시한다.
 
+// 창을 닫는 순간에도 보낼 수 있는 지우기.
+// keepalive 를 붙이면 페이지가 사라져도 요청은 끝까지 나간다.
+// 성공을 보장하지는 못하므로, 앱을 다시 열 때 하는 정리가 진짜 보험이다.
+function cloudEndChallengeBeacon(nickname) {
+  try {
+    fetch(
+      FIRESTORE_BASE + "/" + COL_CHALLENGES + "/" + encodeURIComponent(nickname) +
+        "?key=" + FIREBASE_KEY,
+      { method: "DELETE", keepalive: true }
+    ).catch(() => {});
+  } catch (err) {
+    // 못 보내도 다음에 앱을 열 때 정리된다.
+  }
+}
+
 async function cloudEndChallenge(nickname) {
   const res = await fetchWithTimeout(
     FIRESTORE_BASE + "/" + COL_CHALLENGES + "/" + encodeURIComponent(nickname) +
