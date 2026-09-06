@@ -383,15 +383,27 @@ async function cloudLoadRanking() {
     const name = d.fields.nickname.stringValue;
     const result = d.fields.result.stringValue;
     const seconds = Number(d.fields.elapsedSeconds.integerValue);
+    const minutes = Number(d.fields.goalMinutes.integerValue);
 
     if (!byName.has(name)) {
-      byName.set(name, { nickname: name, successCount: 0, totalSeconds: 0, tries: 0 });
+      byName.set(name, {
+        nickname: name,
+        successCount: 0,
+        totalSeconds: 0,
+        tokens: 0,
+        tries: 0,
+      });
     }
     const row = byName.get(name);
     row.tries += 1;
     if (result === "success") {
       row.successCount += 1;
       row.totalSeconds += seconds;
+      // 티어에 쓰는 값. 내 기록 화면의 calculateTokens 와 반드시 같은 방법으로
+      // 세야 한다. 전에는 totalSeconds 를 60으로 나눠서 썼는데, 그러면
+      // 1분보다 짧은 판에서 두 값이 어긋나 화면마다 티어가 달라진다.
+      // (실제로 마스터인 사람이 순위표에서만 다이아로 나왔다)
+      row.tokens += Math.max(0, Math.round(minutes));
     }
   });
 

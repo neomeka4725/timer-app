@@ -1299,8 +1299,7 @@ async function loadLiveTiers() {
     const rows = await cloudLoadRanking();
     const map = {};
     rows.forEach((row) => {
-      const tokens = Math.round(row.totalSeconds / 60);
-      const info = computeTierFromTokens(tokens);
+      const info = computeTierFromTokens(row.tokens);
       map[row.nickname] = info.tier;
     });
     liveTiers = map;
@@ -2048,6 +2047,16 @@ async function renderRank() {
   rankStatus.textContent = "모두 " + rows.length + "명 · 누적 집중 시간 순";
   const me = loadNickname();
 
+  // 순위표를 열었으니 내 토큰의 진짜 값이 여기 있다. 첫 화면이 쓰는
+  // 캐시를 이걸로 맞춰둔다. 이미 받아온 자료라 읽기가 늘지 않는다.
+  // (다른 기기에서 한 판이 있으면 첫 화면 티어가 뒤처져 있을 수 있는데,
+  //  내 기록뿐 아니라 순위표를 열어도 따라잡게 하려는 것이다)
+  const myRow = rows.find((r) => r.nickname === me);
+  if (myRow) {
+    saveTokenCache(me, myRow.tokens);
+    renderHomeTier(myRow.tokens);
+  }
+
   rows.forEach((row, index) => {
     const li = document.createElement("li");
     if (row.nickname === me) li.classList.add("me");
@@ -2056,10 +2065,10 @@ async function renderRank() {
     no.className = "rank-no";
     no.textContent = index + 1;
 
-    // 티어는 여기 있는 자료로 바로 계산한다. 순위표의 누적 시간은 성공한
-    // 판만 더한 값이라, 분으로 바꾸면 토큰과 같은 숫자가 된다.
-    // 이걸 위해 따로 불러오는 것은 없다. 읽기가 늘지 않는다.
-    const info = computeTierFromTokens(Math.round(row.totalSeconds / 60));
+    // 티어는 여기 있는 자료로 바로 계산한다. 따로 불러오는 것은 없다.
+    // row.tokens 는 내 기록 화면의 calculateTokens 와 같은 방법으로 센 값이라
+    // 어느 화면에서 봐도 티어가 같다.
+    const info = computeTierFromTokens(row.tokens);
 
     const medal = document.createElement("span");
     applyMedal(medal, info.tier);
