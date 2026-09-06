@@ -1321,6 +1321,83 @@ body.focus-mode .ring-sub {
   color: #8a93a6;
 }
 
+/* ---- 첫 화면의 "지금 집중 중" 띠 ---- */
+/*
+ * 화면 맨 아래 버튼을 눌러야만 볼 수 있는 정보는 아무도 안 본다.
+ * 누르지 않아도 눈에 들어오는 자리에 한 줄로 놓는다.
+ * 카드 값(테두리 반경 14px)은 다른 카드와 맞추되, 색은 "도전 중" 버튼과
+ * 같은 계열로 둬서 눌렀을 때 어디로 가는지 짐작이 되게 한다.
+ */
+
+.live-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: -18px 0 28px;
+  padding: 12px 16px;
+  border: 1px solid #ffd9c2;
+  border-radius: 14px;
+  background: #fff7f2;
+  text-align: left;
+  font: inherit;
+  color: #9a3412;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.live-strip:active {
+  background: #ffefe4;
+}
+
+/* 아무도 없을 때는 조용하게. 빈 상태가 눈에 띄면 오히려 김이 샌다. */
+.live-strip.empty {
+  border-color: #e5e9f2;
+  background: #fff;
+  color: #8a93a6;
+  font-weight: 500;
+}
+
+.live-strip-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.live-strip-go {
+  flex: none;
+  font-size: 1.2rem;
+  opacity: 0.5;
+}
+
+/* 살아있는 정보라는 표시. 켜졌다 꺼졌다 하는 점 하나면 충분하다. */
+.live-strip-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f97316;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+.live-strip.empty .live-strip-dot {
+  background: #cbd2df;
+  animation: none;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+/* 움직임을 줄여달라고 설정한 사람에게는 깜빡이지 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .live-strip-dot {
+    animation: none;
+  }
+}
+
 /* ---- 지금 도전 중 ---- */
 
 .live-card {

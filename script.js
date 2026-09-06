@@ -84,6 +84,9 @@ const homeTierTokens = document.getElementById("home-tier-tokens");
 const homeTierFill = document.getElementById("home-tier-fill");
 const homeTierNext = document.getElementById("home-tier-next");
 
+const liveStrip = document.getElementById("live-strip");
+const liveStripText = document.getElementById("live-strip-text");
+
 const liveScreen = document.getElementById("live-screen");
 const liveBtn = document.getElementById("live-btn");
 const liveStatus = document.getElementById("live-status");
@@ -507,6 +510,9 @@ function showScreen(screen) {
   if (screen !== timerScreen) clearPauseTicker();
   // 설정 화면을 열 때마다 나눠쓰기 안내를 다시 확인한다.
   if (screen === setupScreen) updateSplitWarning();
+  // "지금 집중 중" 띠는 첫 화면에 있을 때만 살려둔다.
+  if (screen === setupScreen) startLiveStrip();
+  else stopLiveStrip();
   // 아래로 스크롤한 상태에서 화면을 바꾸면 엉뚱한 곳이 보이므로 맨 위로 올린다.
   window.scrollTo(0, 0);
 }
@@ -1513,6 +1519,92 @@ function shortLeft(ms) {
   return m + "분 " + sec + "초 남음";
 }
 
+// ---- 첫 화면의 "지금 집중 중" 띠 ----
+//
+// "도전 중" 버튼은 화면 맨 아래에 있다. 그래서 누가 하고 있는지 보려면
+// 스크롤을 내려서 버튼을 누르는 두 단계를 거쳐야 하는데, 그 두 단계를
+// 밟는 사람이 없다. 정보가 있어도 아무도 안 보면 없는 것과 같다.
+//
+// 그래서 이름 몇 개와 인원수만 첫 화면 위쪽에 한 줄로 올린다.
+// 자세한 목록·응원 버튼은 그대로 "도전 중" 화면에 두고, 이 줄을 누르면
+// 거기로 간다.
+//
+// 읽기 비용: 지금 집중 중인 사람 수만큼만 읽는다(보통 0~8개).
+// 화면을 보고 있는 동안에만, 그것도 1분에 한 번만 다시 읽는다.
+const LIVE_STRIP_MS = 60 * 1000;
+// 화면을 왔다 갔다 할 때마다 다시 읽으면 낭비다. 이 시간 안에 읽은 게
+// 있으면 그대로 쓴다.
+const LIVE_STRIP_FRESH_MS = 20 * 1000;
+// 띠에 이름을 몇 개까지 늘어놓을지. 넘치면 "외 N명"으로 접는다.
+const LIVE_STRIP_NAMES = 2;
+
+let liveStripTimerId = null;
+let liveStripAt = 0;
+
+function stopLiveStrip() {
+  if (liveStripTimerId !== null) {
+    clearInterval(liveStripTimerId);
+    liveStripTimerId = null;
+  }
+}
+
+function startLiveStrip() {
+  stopLiveStrip();
+  refreshLiveStrip();
+  liveStripTimerId = setInterval(() => {
+    // 화면을 안 보고 있으면 읽지 않는다.
+    if (document.hidden) return;
+    if (setupScreen.classList.contains("hidden")) return;
+    refreshLiveStrip();
+  }, LIVE_STRIP_MS);
+}
+
+function renderLiveStrip(names) {
+  liveStrip.classList.toggle("empty", names.length === 0);
+
+  if (names.length === 0) {
+    liveStripText.textContent = "지금은 아무도 없어요. 첫 번째로 시작해 보세요";
+  } else if (names.length <= LIVE_STRIP_NAMES) {
+    liveStripText.textContent = names.join(", ") + "님이 집중 중이에요";
+  } else {
+    liveStripText.textContent =
+      names.slice(0, LIVE_STRIP_NAMES).join(", ") +
+      " 외 " + (names.length - LIVE_STRIP_NAMES) + "명이 집중 중이에요";
+  }
+
+  liveStrip.classList.remove("hidden");
+}
+
+async function refreshLiveStrip() {
+  if (Date.now() - liveStripAt < LIVE_STRIP_FRESH_MS) return;
+
+  let items;
+  try {
+    items = await cloudLoadChallenges();
+  } catch (err) {
+    // 못 불러오면 조용히 숨긴다. 첫 화면에 오류 문구를 띄우면
+    // 정작 중요한 시작하기 버튼이 밀린다.
+    liveStrip.classList.add("hidden");
+    // 실패도 시각을 적어둔다. 안 적어두면 화면을 왔다 갔다 할 때마다
+    // 곧바로 다시 시도해서, 인터넷이 안 될 때 요청만 쌓인다.
+    liveStripAt = Date.now();
+    return;
+  }
+
+  liveStripAt = Date.now();
+  // 나는 뺀다. 집중 중이면 이 화면에 있을 수가 없으니, 여기 내가 보이면
+  // 지워지지 않고 남은 찌꺼기다. ("도전 중" 화면과 같은 규칙)
+  const me = loadNickname();
+  const names = items
+    .filter((i) => i.nickname !== me)
+    // 늦게 시작한 사람이 앞에 온다. 방금 들어온 친구가 먼저 보이는 쪽이
+    // "지금 같이 하자"는 느낌에 가깝다.
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .map((i) => i.nickname);
+
+  renderLiveStrip(names);
+}
+
 async function loadLive() {
   if (liveLoading) return;
   liveLoading = true;
@@ -1693,6 +1785,13 @@ async function sendChallengeCheer(item, btn, countEl) {
     liveStatus.textContent = "⚠️ 응원을 보내지 못했어요.";
   }
 }
+
+// 첫 화면의 띠를 누르면 자세한 목록으로 간다.
+liveStrip.addEventListener("click", () => {
+  showScreen(liveScreen);
+  loadLiveTiers();
+  loadLive();
+});
 
 liveBtn.addEventListener("click", () => {
   showScreen(liveScreen);
