@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=39 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=40 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=39" />
+  <link rel="manifest" href="manifest.json?v=40" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=39" />
+  <link rel="stylesheet" href="style.css?v=40" />
 </head>
 <body>
 
@@ -92,6 +92,15 @@
 
     <h1>📵 디지털 웰빙 타이머</h1>
     <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
+
+    <!-- 지금 누가 집중 중인지. 화면 맨 아래 "도전 중" 버튼을 눌러야만
+         볼 수 있으면 아무도 안 본다. 누르지 않아도 보이는 자리에 둔다.
+         눌러서 들어가면 자세한 목록이 나온다. -->
+    <button type="button" id="live-strip" class="live-strip hidden">
+      <span class="live-strip-dot" aria-hidden="true"></span>
+      <span class="live-strip-text" id="live-strip-text"></span>
+      <span class="live-strip-go" aria-hidden="true">›</span>
+    </button>
 
     <!-- 패드처럼 넓은 화면에서만 두 칸으로 갈라진다.
          폰에서는 .pad-col 이 display:contents 라서 없는 것처럼 지나간다. -->
@@ -399,8 +408,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=39"></script>
-  <script src="cloud.js?v=39"></script>
-  <script src="script.js?v=39"></script>
+  <script src="storage.js?v=40"></script>
+  <script src="cloud.js?v=40"></script>
+  <script src="script.js?v=40"></script>
 </body>
 </html>
