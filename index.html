@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=41 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=42 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=41" />
+  <link rel="manifest" href="manifest.json?v=42" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=41" />
+  <link rel="stylesheet" href="style.css?v=42" />
 </head>
 <body>
 
@@ -153,7 +153,8 @@
     <p class="notice">
       ⚠️ 타이머 중에 다른 앱이나 탭으로 나가면 실패로 처리돼요.<br />
       단, <b>30초 안에</b> 돌아오면 3번까지 봐줘요.<br />
-      봐주는 동안에는 <b>타이머도 같이 멈춥니다.</b>
+      봐주는 동안에는 <b>타이머도 같이 멈춥니다.</b><br />
+      실패하거나 포기해도 <b>집중한 시간의 절반</b>은 토큰으로 받아요.
     </p>
     <p class="notice">
       화장실처럼 오래 자리를 비울 땐 타이머 화면의
@@ -345,6 +346,10 @@
       </div>
       <div class="tier-bar"><div class="tier-bar-fill" id="tier-bar-fill"></div></div>
       <p class="tier-next" id="tier-next"></p>
+      <p class="tier-rule">
+        성공하면 <b>목표 시간만큼</b>, 실패·포기해도
+        <b>집중한 시간의 절반</b>을 토큰으로 받아요.
+      </p>
     </div>
 
     <h3 class="list-title">최근 기록</h3>
@@ -408,8 +413,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=41"></script>
-  <script src="cloud.js?v=41"></script>
-  <script src="script.js?v=41"></script>
+  <script src="storage.js?v=42"></script>
+  <script src="cloud.js?v=42"></script>
+  <script src="script.js?v=42"></script>
 </body>
 </html>

@@ -867,10 +867,13 @@ function stopTimer(result, awaySeconds) {
     .then(() => markRecordSynced(record.at))
     .catch(() => {});
 
-  // 성공한 판만 토큰이 된다. 인터넷을 다시 보지 않고 이 기기 숫자에 더한다.
-  // 그래야 돌아가기를 눌렀을 때 첫 화면 티어가 바로 올라가 있다.
-  if (result === "success") {
-    bumpTokenCache(record.nickname, record.goalMinutes);
+  // 이번 판이 준 토큰을 이 기기 숫자에 더한다. 인터넷을 다시 보지 않아도
+  // 돌아가기를 눌렀을 때 첫 화면 티어가 바로 올라가 있다.
+  // 실패·포기도 절반을 주므로 성공만 따지지 않는다. 계산은 recordTokens
+  // 한 곳에서만 한다.
+  const gained = recordTokens(record);
+  if (gained > 0) {
+    bumpTokenCache(record.nickname, gained);
     refreshHomeTier();
   }
 

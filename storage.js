@@ -207,13 +207,39 @@ function markCheered(challengeId) {
 //
 // 토큰은 따로 저장하지 않는다. 저장해두면 기록과 어긋날 수 있고,
 // 고칠 수 있는 값이 되면 누가 숫자를 바꿔치기할 수도 있다.
-// 항상 기록에서 다시 계산한다. (성공한 판의 목표 시간을 분 단위로 더한다)
+// 항상 기록에서 다시 계산한다.
 //
-// 성공 1분 = 1토큰. 실패·포기는 0토큰.
+//   성공     : 목표 시간 그대로 (25분 성공 = 25토큰)
+//   실패·포기 : 실제로 집중한 시간의 절반
+//
+// 전에는 실패·포기가 0토큰이었다. 그런데 50분을 걸고 45분을 버티다 실패한
+// 사람과 시작도 안 한 사람이 똑같이 0이었다. 제일 열심히 한 순간에 제일
+// 크게 실망하는 구조라서 고쳤다. 반 전체로 보면 202분이 그렇게 버려지고
+// 있었다.
+//
+// 절반인 이유: 포기하면 "지금까지 집중한 시간의 절반"이 날아간다는 뜻이라
+// 한 마디로 설명이 되고, 끝까지 하는 쪽이 항상 이득이다.
+//
+// 기준이 "목표 시간"이 아니라 "실제로 집중한 시간"인 것이 중요하다.
+// 목표 시간을 기준으로 하면 120분을 걸고 1초 만에 포기해도 60토큰을 받아서,
+// 아무것도 안 하고 티어를 올릴 수 있게 된다.
+const FAIL_TOKEN_RATE = 0.5;
+
+// 판 하나가 주는 토큰.
+//
+// ⚠️ 토큰을 세는 곳은 여기 하나뿐이어야 한다. 순위표(cloud.js)도 이 함수를
+// 부른다. 같은 계산을 두 군데 두면 한쪽만 고쳐서 화면마다 티어가 갈린다.
+// 실제로 그런 적이 있다. (마스터인 사람이 순위표에서만 다이아로 나왔다)
+function recordTokens(record) {
+  if (record.result === "success") {
+    return Math.max(0, Math.round(record.goalMinutes));
+  }
+  const minutes = record.elapsedSeconds / 60;
+  return Math.max(0, Math.floor(minutes * FAIL_TOKEN_RATE));
+}
+
 function calculateTokens(records) {
-  return records
-    .filter((r) => r.result === "success")
-    .reduce((sum, r) => sum + Math.max(0, Math.round(r.goalMinutes)), 0);
+  return records.reduce((sum, r) => sum + recordTokens(r), 0);
 }
 
 // 낮은 티어부터 차례대로. 마지막이 최고 티어다.

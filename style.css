@@ -1321,6 +1321,17 @@ body.focus-mode .ring-sub {
   color: #8a93a6;
 }
 
+/* 토큰을 어떻게 받는지 한 줄. 티어를 처음 본 사람이 제일 궁금해하는 것이라
+   내 기록 화면의 티어 상자 안에 둔다. */
+.tier-rule {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #eef0f6;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #8a93a6;
+}
+
 /* ---- 첫 화면의 "지금 집중 중" 띠 ---- */
 /*
  * 화면 맨 아래 버튼을 눌러야만 볼 수 있는 정보는 아무도 안 본다.
