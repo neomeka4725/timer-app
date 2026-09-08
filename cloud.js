@@ -396,14 +396,20 @@ async function cloudLoadRanking() {
     }
     const row = byName.get(name);
     row.tries += 1;
+
+    // 티어에 쓰는 값. storage.js 의 recordTokens 를 그대로 부른다.
+    // 같은 계산을 여기에 또 적으면 한쪽만 고쳐서 화면마다 티어가 갈린다.
+    // 실제로 그랬던 적이 있다. (마스터인 사람이 순위표에서만 다이아)
+    // 실패·포기도 절반을 받으므로 성공 여부를 가리지 않고 판마다 더한다.
+    row.tokens += recordTokens({
+      result: result,
+      goalMinutes: minutes,
+      elapsedSeconds: seconds,
+    });
+
     if (result === "success") {
       row.successCount += 1;
       row.totalSeconds += seconds;
-      // 티어에 쓰는 값. 내 기록 화면의 calculateTokens 와 반드시 같은 방법으로
-      // 세야 한다. 전에는 totalSeconds 를 60으로 나눠서 썼는데, 그러면
-      // 1분보다 짧은 판에서 두 값이 어긋나 화면마다 티어가 달라진다.
-      // (실제로 마스터인 사람이 순위표에서만 다이아로 나왔다)
-      row.tokens += Math.max(0, Math.round(minutes));
     }
   });
 
