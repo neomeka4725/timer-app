@@ -2294,7 +2294,8 @@ if (savedNickname === "") {
 }
 
 // ▼▼▼ 개발용 · 다 만들면 이 덩어리를 통째로 지울 것 ▼▼▼
-// (index.html 의 dev-quick-btn 한 줄, style.css 의 .dev-btn 덩어리도 같이)
+// (index.html 의 dev-quick-btn / dev-skip-btn 두 줄,
+//  style.css 의 .dev-btn 덩어리도 같이)
 //
 // 10분짜리를 걸어놓고 기다리면서 시험할 수가 없어서 넣었다.
 // 평소대로 startTimer() 로 시작한 뒤, 이번 판만 15초로 줄인다.
@@ -2325,4 +2326,30 @@ document.getElementById("dev-quick-btn").addEventListener("click", () => {
   // "지금 도전 중" 목록에 올라간 남은 시간도 새 값으로 맞춘다.
   extendChallenge();
 });
+// 시간을 앞으로 감는다.
+//
+// "45분 집중하다 포기하면 22토큰"을 확인하려면 진짜로 45분을 앉아 있어야
+// 한다. 15초 버튼으로도 안 된다. 8초의 절반은 0토큰이라 아무것도 안 보인다.
+//
+// 시계는 endTime(끝나야 하는 시각) 하나로만 굴러가므로, 그 시각을 앞으로
+// 당기면 시간이 흐른 것과 똑같아진다. 남은 시간·링·성공 판정·기록에 남는
+// 집중 시간까지 전부 따라온다.
+//
+// 예) 50분으로 시작 → 9번 누르면 45분 지난 상태 → 포기 → 22토큰
+const DEV_SKIP_SECONDS = 5 * 60;
+
+document.getElementById("dev-skip-btn").addEventListener("click", () => {
+  // 멈춰둔 중에는 시계가 원래 안 흐르므로 감을 것도 없다.
+  if (phase !== "focus") return;
+
+  endTime -= DEV_SKIP_SECONDS * 1000;
+  remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+  // 다음 tick(0.25초)까지 기다리지 않고 바로 고쳐 그린다.
+  renderCountdown(remainingSeconds);
+  setRing(goalSeconds === 0 ? 0 : remainingSeconds / goalSeconds);
+  // "지금 도전 중" 목록의 끝날 시각은 일부러 안 맞춘다. 누를 때마다
+  // 지웠다 다시 올리게 되는데, 시험하려고 여러 번 누르는 버튼이라
+  // 쓸데없는 쓰기가 쌓인다. 어차피 판이 끝나면 내려간다.
+});
+
 // ▲▲▲ 개발용 여기까지 ▲▲▲

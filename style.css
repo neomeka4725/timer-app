@@ -1651,6 +1651,9 @@ body.focus-mode .ring-sub {
 .dev-btn {
   display: block;
   margin: 24px auto 0;
+  /* 어두운 집중 화면에서도 보여야 한다 */
+  position: relative;
+  z-index: 1;
   padding: 8px 14px;
   border: 1px dashed #d7ddee;
   border-radius: 10px;
@@ -1658,5 +1661,22 @@ body.focus-mode .ring-sub {
   color: #b6bccb;
   font-size: 0.75rem;
   font-family: inherit;
+}
+/* 타이머 화면의 감기 버튼은 화면 구석에 띄운다.
+   흐름 안에 두면 버튼이 하나 늘어난 만큼 화면이 길어져서, 패드 가로처럼
+   낮은 화면에서 아래가 잘린다. 어차피 지울 버튼이라 배치를 건드리지
+   않는 쪽이 안전하다. */
+#dev-skip-btn {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+  z-index: 50;
+}
+
+/* 집중 중에는 화면이 어두워서 흐린 회색이 안 보인다. */
+body.focus-mode .dev-btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.45);
 }
 /* ▲▲▲ 개발용 여기까지 ▲▲▲ */
