@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>디지털 웰빙 타이머</title>
-  <!-- 주소 뒤의 ?v=44 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
+  <!-- 주소 뒤의 ?v=45 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=44" />
+  <link rel="manifest" href="manifest.json?v=45" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=44" />
+  <link rel="stylesheet" href="style.css?v=45" />
 </head>
 <body>
 
@@ -89,6 +89,33 @@
         <small class="home-tier-next" id="home-tier-next"></small>
       </span>
     </button>
+
+    <!-- 연속 학습. 며칠째인지를 제일 크게 보여준다.
+         이어가는 기준은 "그날 하루 목표를 채웠는가" 하나다.
+         하루 목표는 옆에서 바로 고칠 수 있다. -->
+    <div class="streak-card" id="streak-card">
+      <div class="streak-count">
+        <span class="streak-fire" id="streak-fire" aria-hidden="true">🔥</span>
+        <b class="streak-days" id="streak-days">0</b><span class="streak-unit">일째</span>
+      </div>
+      <div class="streak-main">
+        <p class="streak-today" id="streak-today"></p>
+        <div class="streak-bar"><div class="streak-fill" id="streak-fill"></div></div>
+        <p class="streak-goal">
+          하루 목표
+          <input
+            type="text"
+            id="daily-goal"
+            class="goal-input"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="3"
+            value="30"
+            aria-label="하루 목표(분)"
+          />분
+        </p>
+      </div>
+    </div>
 
     <h1>📵 디지털 웰빙 타이머</h1>
     <p class="subtitle">목표 시간을 정하고 폰과 멀어져 보세요</p>
@@ -404,8 +431,8 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=44"></script>
-  <script src="cloud.js?v=44"></script>
-  <script src="script.js?v=44"></script>
+  <script src="storage.js?v=45"></script>
+  <script src="cloud.js?v=45"></script>
+  <script src="script.js?v=45"></script>
 </body>
 </html>

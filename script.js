@@ -77,6 +77,12 @@ const tierTokens = document.getElementById("tier-tokens");
 const tierBarFill = document.getElementById("tier-bar-fill");
 const tierNext = document.getElementById("tier-next");
 
+const streakCard = document.getElementById("streak-card");
+const streakDays = document.getElementById("streak-days");
+const streakToday = document.getElementById("streak-today");
+const streakFill = document.getElementById("streak-fill");
+const dailyGoalInput = document.getElementById("daily-goal");
+
 const homeTier = document.getElementById("home-tier");
 const homeTierMedal = document.getElementById("home-tier-medal");
 const homeTierName = document.getElementById("home-tier-name");
@@ -877,6 +883,13 @@ function stopTimer(result, awaySeconds) {
     refreshHomeTier();
   }
 
+  // 오늘 집중한 시간에 더한다. 토큰과 달리 실패·포기도 전부 센다.
+  // 40분 하다 실패한 것도 40분 집중한 것이기 때문이다.
+  if (record.elapsedSeconds > 0) {
+    bumpDailyMinutes(record.nickname, record.at, record.elapsedSeconds / 60);
+    renderStreak();
+  }
+
   cancelBtn.classList.add("hidden");
   restartBtn.classList.remove("hidden");
   lastRecord = record;
@@ -1146,6 +1159,13 @@ async function renderStats() {
   if (result.online) saveTokenCache(nickname, tokens);
   renderHomeTier(tokens);
 
+  // 날짜별 집중 시간도 여기서 진짜 값으로 맞춘다. 다른 기기에서 한 것까지
+  // 합쳐진 목록이라 이게 가장 정확하다.
+  if (result.online) {
+    saveDailyMinutes(nickname, buildDailyMinutes(records));
+    renderStreak();
+  }
+
   if (result.online) {
     syncStatus.textContent = "☁️ 모든 기기의 기록을 합쳐서 보여주고 있어요";
   } else {
@@ -1283,6 +1303,70 @@ async function refreshHomeTier() {
   // 그걸 적어두면 계속 틀린 값을 쓰게 되므로 성공했을 때만 적는다.
   if (result.online) saveTokenCache(nickname, tokens);
 }
+
+// ---- 연속 학습 ----
+//
+// 티어가 "얼마나 많이"라면 이쪽은 "얼마나 꾸준히"다.
+// 날짜별 집중 시간은 기기에 적어두고 쓴다(storage.js). 판이 끝날 때마다
+// 오늘 칸에 더하고, 내 기록 화면을 열면 진짜 기록으로 다시 맞춘다.
+// 첫 화면을 열 때 인터넷을 안 보는 이유는 토큰 캐시와 같다.
+
+function renderStreak() {
+  const nickname = loadNickname();
+  const goal = loadDailyGoal();
+  const info = streakInfo(loadDailyMinutes(nickname), goal, Date.now());
+
+  streakDays.textContent = info.days;
+  // 연속이 하루라도 이어지고 있으면 불을 켠다.
+  streakCard.classList.toggle("on", info.days > 0);
+  streakCard.classList.toggle("done", info.doneToday);
+
+  if (info.doneToday) {
+    streakToday.textContent =
+      `오늘 목표 달성! ${info.todayMinutes}분 집중했어요`;
+  } else if (info.days > 0) {
+    streakToday.textContent =
+      `오늘 ${info.todayMinutes}분 · ${info.left}분 더 하면 ${info.days + 1}일째`;
+  } else {
+    streakToday.textContent =
+      `오늘 ${info.todayMinutes}분 · ${info.left}분을 채우면 시작돼요`;
+  }
+
+  streakFill.style.width = info.progress + "%";
+  // 자판을 띄워놓고 고치는 중일 때 값을 덮어쓰면 글자가 사라진다.
+  if (document.activeElement !== dailyGoalInput) {
+    dailyGoalInput.value = String(goal);
+  }
+  fitGoalInput();
+}
+
+// 칸 너비를 숫자 길이에 맞춘다. 목표 시간 칸과 같은 방식이다.
+function fitGoalInput() {
+  const len = Math.max(1, dailyGoalInput.value.length);
+  dailyGoalInput.style.width = len + "ch";
+}
+
+dailyGoalInput.addEventListener("input", () => {
+  dailyGoalInput.value = dailyGoalInput.value.replace(/\D/g, "").slice(0, 3);
+  fitGoalInput();
+});
+
+// 칸을 벗어날 때 저장한다. 치는 도중에 저장하면 "3"만 쳤을 때
+// 3분으로 저장됐다가 5분으로 올림당해서 30을 못 치게 된다.
+function commitDailyGoal() {
+  const n = Number(dailyGoalInput.value);
+  const saved = saveDailyGoal(
+    Number.isFinite(n) && n > 0 ? n : DAILY_GOAL_DEFAULT
+  );
+  dailyGoalInput.value = String(saved);
+  renderStreak();
+}
+
+dailyGoalInput.addEventListener("blur", commitDailyGoal);
+dailyGoalInput.addEventListener("focus", () => dailyGoalInput.select());
+dailyGoalInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") dailyGoalInput.blur();
+});
 
 // ---- 지금 도전 중 ----
 //
@@ -2233,6 +2317,7 @@ async function confirmNickname() {
     showScreen(setupScreen);
     // 닉네임이 바뀌면 예전 토큰 캐시는 남의 것이 된다. 새로 받아온다.
     refreshHomeTier();
+    renderStreak();
     checkBoardUpdates();
   } catch (err) {
     if (err.status === 403) {
@@ -2289,6 +2374,7 @@ if (savedNickname === "") {
   greetingName.textContent = savedNickname;
   showScreen(setupScreen);
   refreshHomeTier();
+  renderStreak();
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
