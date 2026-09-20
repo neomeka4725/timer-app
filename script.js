@@ -1495,9 +1495,13 @@ async function loadLiveTiers() {
 //
 // 계속 10초마다 보면 반 전체가 켰을 때 무료 요금제 읽기가 금방 없어진다.
 // (보는 사람 수 × 도전 수 만큼 읽기 때문에 사람이 늘면 제곱으로 늘어난다)
-const MATES_FAST_MS = 10 * 1000;
+// 자주 도는 확인(가벼운 확인)은 "개수만 세기"라 몇 명이 있든 읽기 1회다.
+const MATES_FAST_MS = 15 * 1000;
 const MATES_SLOW_MS = 45 * 1000;
 const MATES_FAST_WINDOW_MS = 3 * 60 * 1000;
+// 이름·미션을 새로 받아오고 받은 응원도 확인하는 "무거운 확인"의 간격.
+// 이건 사람 수만큼 읽으므로 뜸하게 한다. 이름은 천천히 바뀌어도 된다.
+const MATES_FULL_MS = 3 * 60 * 1000;
 // 이번 판의 열쇠. 판마다 달라서 지난 판의 응원이 따라오지 않는다.
 let myChallengeId = "";
 // 이번 판을 시작한 시각. 봐주기로 시계를 밀 때 도전을 다시 올리는 데 쓴다.
@@ -1508,6 +1512,8 @@ let lastCheerCount = 0;
 const MATES_MAX_CHIPS = 6;
 let matesTimerId = null;
 let matesStartedAt = 0;
+// 마지막으로 "무거운 확인"(이름·응원)을 한 시각.
+let matesLastFullAt = 0;
 
 // 시계만 멈춘다. 판이 끝난 게 아니라 다시 시작하는 경우에 쓴다.
 function clearMatesTimer() {
@@ -1575,39 +1581,75 @@ function renderMateChips(names) {
   mateChips.classList.remove("hidden");
 }
 
-async function refreshMates() {
+// "몇 명 함께"라는 줄만 새로 적는다. 인원수가 0이면 줄과 이름표를 숨긴다.
+function renderMatesLine(count) {
+  if (count <= 0) {
+    focusMates.classList.add("hidden");
+    mateChips.classList.add("hidden");
+    return;
+  }
+  focusMates.textContent = "🔥 " + count + "명이 함께 집중 중";
+  focusMates.classList.remove("hidden");
+}
+
+// 받은 응원을 확인한다. "내 응원만" 걸러오는 싸고 작은 질의라(보통 0~몇 개)
+// 매 확인마다 해도 된다. 응원이 왔을 때 빨리 보여야 힘이 되기 때문이다.
+function refreshMyCheers() {
+  if (!myChallengeId) return;
+  cloudLoadMyChallengeCheers(myChallengeId)
+    .then((names) => {
+      if (phase === "focus" && names) renderCheerGot(names);
+    })
+    .catch(() => {});
+}
+
+// 집중 중 "함께하는 사람" 확인.
+//
+//   full=true  : 이름·미션을 새로 받아오고 지난 도전을 치운다.
+//                사람 수만큼 읽으므로 가끔만 한다(이름은 천천히 바뀌어도 됨).
+//   full=false : 개수만 센다(몇 명이든 읽기 1회). 자주 도는 확인은 이쪽이다.
+//
+// 받은 응원은 어느 쪽이든 매번 확인한다. 그건 싼 질의라 자주 봐도 된다.
+async function refreshMates(full) {
   // 집중 중이 아니면 셀 이유가 없다.
   if (phase !== "focus") return;
   const me = loadNickname();
-  try {
-    // 함께하는 사람과 내가 받은 응원을 같이 가져온다.
-    const [items, myCheers] = await Promise.all([
-      cloudLoadChallenges(),
-      myChallengeId
-        ? cloudLoadMyChallengeCheers(myChallengeId).catch(() => null)
-        : Promise.resolve(null),
-    ]);
-    if (phase === "focus" && myCheers) renderCheerGot(myCheers);
-    // 나는 빼고 센다. "함께"라는 말과 맞아야 한다.
-    const others = items.filter((i) => i.nickname !== me);
-    // 도중에 판이 끝났으면 건드리지 않는다.
-    if (phase !== "focus") return;
-    if (others.length === 0) {
+
+  refreshMyCheers();
+
+  if (full) {
+    try {
+      const items = await cloudLoadChallenges();
+      matesLastFullAt = Date.now();
+      // 나는 빼고 센다. "함께"라는 말과 맞아야 한다.
+      const others = items.filter((i) => i.nickname !== me);
+      if (phase !== "focus") return;
+      renderMatesLine(others.length);
+      if (others.length > 0) {
+        // 오래 남은 사람부터. 곧 끝날 사람보다 오래 같이 있을 사람이다.
+        const names = others
+          .sort((a, b) => b.endAt - a.endAt)
+          .map((i) => i.nickname);
+        renderMateChips(names);
+      }
+    } catch (err) {
       focusMates.classList.add("hidden");
       mateChips.classList.add("hidden");
-      return;
     }
-    // 오래 남은 사람부터 보여준다. 곧 끝날 사람보다 오래 같이 있을 사람이다.
-    const names = others
-      .sort((a, b) => b.endAt - a.endAt)
-      .map((i) => i.nickname);
-    focusMates.textContent = "🔥 " + names.length + "명이 함께 집중 중";
-    focusMates.classList.remove("hidden");
-    renderMateChips(names);
+    return;
+  }
+
+  // 가벼운 확인: 개수만 센다.
+  try {
+    const n = await cloudCountChallenges();
+    if (phase !== "focus") return;
+    // 내 도전이 올라가 있으면 나를 하나 뺀다.
+    const others = Math.max(0, n - (myChallengeStartedAt ? 1 : 0));
+    // 인원수 줄만 고쳐 적는다. 이름표는 무거운 확인 때 바뀐다.
+    // 0명이 되면 이름표도 같이 숨긴다.
+    renderMatesLine(others);
   } catch (err) {
-    // 못 불러와도 타이머는 그대로다. 아무것도 안 보여준다.
-    focusMates.classList.add("hidden");
-    mateChips.classList.add("hidden");
+    // 개수를 못 세도 이미 보여주던 것은 그대로 둔다. 깜빡이지 않게.
   }
 }
 
@@ -1616,7 +1658,9 @@ function startMates() {
   // 여기서는 시계만 새로 건다.
   clearMatesTimer();
   matesStartedAt = Date.now();
-  refreshMates();
+  matesLastFullAt = 0;
+  // 처음 한 번은 이름까지 받아온다(무거운 확인).
+  refreshMates(true);
   scheduleMates();
 }
 
@@ -1626,7 +1670,11 @@ function scheduleMates() {
   const early = Date.now() - matesStartedAt < MATES_FAST_WINDOW_MS;
   matesTimerId = setTimeout(() => {
     // 화면을 안 보고 있으면 굳이 불러오지 않는다.
-    if (!document.hidden) refreshMates();
+    if (!document.hidden) {
+      // 이름을 받은 지 오래됐으면 무거운 확인, 아니면 개수만 센다.
+      const full = Date.now() - matesLastFullAt >= MATES_FULL_MS;
+      refreshMates(full);
+    }
     if (phase === "focus") scheduleMates();
   }, early ? MATES_FAST_MS : MATES_SLOW_MS);
 }
