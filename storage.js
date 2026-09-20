@@ -346,6 +346,145 @@ function bumpTokenCache(nickname, addMinutes) {
   return next;
 }
 
+// ---- 하루 목표와 연속 학습 ----
+//
+// 티어가 "얼마나 많이 했나"라면, 연속 학습은 "얼마나 꾸준히 했나"다.
+// 한 번에 오래 하는 것보다 매일 조금씩 하는 쪽이 습관이 되기 때문에
+// 둘을 따로 센다.
+//
+// 이어가는 기준은 "그날 하루 목표를 채웠는가" 하나다.
+// 판을 몇 번 했는지는 안 본다. 10분 목표를 세 번에 나눠 해도 된다.
+
+const DAILY_GOAL_KEY = "wellness-timer-daily-goal";
+// 너무 낮으면 의미가 없고 너무 높으면 하루 만에 끊겨서 다시 안 본다.
+const DAILY_GOAL_MIN = 5;
+const DAILY_GOAL_MAX = 600;
+const DAILY_GOAL_DEFAULT = 30;
+
+function loadDailyGoal() {
+  try {
+    const n = Number(localStorage.getItem(DAILY_GOAL_KEY));
+    if (!Number.isFinite(n) || n <= 0) return DAILY_GOAL_DEFAULT;
+    return Math.min(DAILY_GOAL_MAX, Math.max(DAILY_GOAL_MIN, Math.round(n)));
+  } catch (err) {
+    return DAILY_GOAL_DEFAULT;
+  }
+}
+
+function saveDailyGoal(minutes) {
+  const n = Math.min(DAILY_GOAL_MAX, Math.max(DAILY_GOAL_MIN, Math.round(minutes)));
+  try {
+    localStorage.setItem(DAILY_GOAL_KEY, String(n));
+  } catch (err) {
+    // 못 적어도 이번 실행 동안은 그대로 쓴다.
+  }
+  return n;
+}
+
+// 날짜 이름표. 기기에 맞춘 그 지역 날짜로 만든다.
+// UTC 로 만들면 한국에서 밤 9시에 한 것이 다음 날로 넘어가버린다.
+function dayKey(ms) {
+  const d = new Date(ms);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + m + "-" + day;
+}
+
+// 하루에 실제로 집중한 시간(분)을 날짜별로 모은다.
+//
+// 성공한 판만 세지 않는다. 40분 하다가 실패한 것도 40분 집중한 것이다.
+// 토큰은 절반만 주지만(끝까지 한 쪽이 이득이어야 하니까), "오늘 얼마나
+// 했나"를 셀 때까지 반으로 깎으면 억울하다.
+function buildDailyMinutes(records) {
+  const days = {};
+  records.forEach((r) => {
+    const key = dayKey(r.at);
+    days[key] = (days[key] || 0) + Math.max(0, r.elapsedSeconds) / 60;
+  });
+  Object.keys(days).forEach((k) => (days[k] = Math.round(days[k])));
+  return days;
+}
+
+// ---- 날짜별 기록 캐시 ----
+//
+// 토큰 캐시와 같은 이유로 둔다. 첫 화면에 연속 일수를 띄우려고 매번
+// 기록을 통째로 받아오면 읽기 횟수가 확 는다.
+// 판이 끝날 때마다 오늘 칸에 더하고, 내 기록 화면을 열면 진짜 값으로
+// 다시 맞춘다.
+const DAILY_KEY = "wellness-timer-daily";
+// 연속 일수를 세는 데 필요한 만큼만 남긴다. 계속 쌓으면 저장 공간을 먹는다.
+const DAILY_KEEP_DAYS = 400;
+
+function loadDailyMinutes(nickname) {
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.nickname !== nickname || !saved.days) return null;
+    return saved.days;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveDailyMinutes(nickname, days) {
+  if (!nickname) return;
+  try {
+    // 오래된 날짜는 버린다.
+    const keys = Object.keys(days).sort();
+    const trimmed = {};
+    keys.slice(-DAILY_KEEP_DAYS).forEach((k) => (trimmed[k] = days[k]));
+    localStorage.setItem(DAILY_KEY, JSON.stringify({ nickname: nickname, days: trimmed }));
+  } catch (err) {
+    // 못 적어도 화면에는 이번 값이 그대로 보인다.
+  }
+}
+
+// 판이 끝났을 때 오늘 칸에 더한다. (인터넷을 안 봐도 맞는다)
+function bumpDailyMinutes(nickname, atMs, minutes) {
+  const days = loadDailyMinutes(nickname) || {};
+  const key = dayKey(atMs);
+  days[key] = (days[key] || 0) + Math.max(0, Math.round(minutes));
+  saveDailyMinutes(nickname, days);
+  return days;
+}
+
+// 연속 며칠째인지 센다.
+//
+// 오늘 아직 목표를 못 채웠어도 연속이 끊긴 게 아니다. 오늘은 아직
+// 안 끝났기 때문이다. 그럴 때는 어제까지로 세고, "오늘 채우면 N+1일"을
+// 보여준다. 여기서 0으로 만들어버리면 아침에 앱을 연 사람이 전부
+// "0일째"를 보게 된다.
+function streakInfo(days, goalMinutes, nowMs) {
+  const goal = Math.max(1, Math.round(goalMinutes));
+  const map = days || {};
+  const todayKey = dayKey(nowMs);
+  const todayMinutes = map[todayKey] || 0;
+  const doneToday = todayMinutes >= goal;
+
+  let count = 0;
+  const cursor = new Date(nowMs);
+  // 오늘을 아직 못 채웠으면 어제부터 거슬러 올라간다.
+  if (!doneToday) cursor.setDate(cursor.getDate() - 1);
+
+  // 400일이면 충분하다. 혹시 모를 무한 반복도 여기서 막힌다.
+  for (let i = 0; i < DAILY_KEEP_DAYS; i++) {
+    if ((map[dayKey(cursor.getTime())] || 0) < goal) break;
+    count += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return {
+    days: count,
+    goal: goal,
+    todayMinutes: todayMinutes,
+    doneToday: doneToday,
+    // 오늘 목표까지 남은 분
+    left: Math.max(0, goal - todayMinutes),
+    progress: Math.max(0, Math.min(100, Math.round((todayMinutes / goal) * 100))),
+  };
+}
+
 // 기록 목록에서 통계를 계산한다.
 function summarize(records) {
   const successes = records.filter((r) => r.result === "success");
