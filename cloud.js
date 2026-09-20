@@ -178,6 +178,41 @@ async function cloudStartChallenge(challenge) {
   return true;
 }
 
+// 지금 집중 중인 사람이 "몇 명인지"만 센다.
+//
+// 문서를 통째로 안 가져오고 개수만 받아온다(:runAggregationQuery).
+// 그래서 몇 명이 있든 읽기 1회로 끝난다. 집중 중에 자주 확인해야 하는데,
+// 사람 수만큼 읽으면(보는 사람 × 집중 중인 사람) 반 전체가 켰을 때 읽기가
+// 제곱으로 늘어나기 때문이다.
+//
+// 이름은 못 받는다. 이름·미션은 가끔 cloudLoadChallenges 로 따로 받는다.
+// 끝난 지 얼마 안 된(아직 안 치운) 도전도 같이 세질 수 있는데, 사람 수는
+// 어림수라 조금 어긋나도 괜찮다. cloudLoadChallenges 가 돌 때 치워진다.
+async function cloudCountChallenges() {
+  const res = await fetchWithTimeout(
+    FIRESTORE_BASE + ":runAggregationQuery?key=" + FIREBASE_KEY,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        structuredAggregationQuery: {
+          aggregations: [{ alias: "n", count: {} }],
+          structuredQuery: { from: [{ collectionId: COL_CHALLENGES }] },
+        },
+      }),
+    }
+  );
+  if (!res.ok) throw makeError("인원수 세기 실패", res.status);
+  const rows = await res.json();
+  const field =
+    rows &&
+    rows[0] &&
+    rows[0].result &&
+    rows[0].result.aggregateFields &&
+    rows[0].result.aggregateFields.n;
+  return field ? Number(field.integerValue) : 0;
+}
+
 // 지금 도전 중인 사람들을 가져온다.
 // 끝날 시각이 지난 것은 빼고 보여주고, 조용히 지워둔다.
 // (앱을 그냥 닫아버리면 문서가 남는데, 그러면 계속 집중 중인 것처럼 보인다)
