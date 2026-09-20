@@ -6,10 +6,10 @@
   <title>디지털 웰빙 타이머</title>
   <!-- 주소 뒤의 ?v=45 는 브라우저가 옛날 파일을 계속 쓰지 않게 하는 표시.
        파일을 고칠 때마다 이 숫자를 올린다. -->
-  <link rel="manifest" href="manifest.json?v=45" />
+  <link rel="manifest" href="manifest.json?v=46" />
   <meta name="theme-color" content="#4c6fff" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=45" />
+  <link rel="stylesheet" href="style.css?v=46" />
 </head>
 <body>
 
@@ -113,6 +113,7 @@
             value="30"
             aria-label="하루 목표(분)"
           />분
+          <span class="streak-wallet" id="streak-wallet"></span>
         </p>
       </div>
     </div>
@@ -431,8 +432,21 @@
     <button type="button" id="rank-back-bottom" class="primary-btn">돌아가기</button>
   </section>
 
-  <script src="storage.js?v=45"></script>
-  <script src="cloud.js?v=45"></script>
-  <script src="script.js?v=45"></script>
+  <script src="storage.js?v=46"></script>
+  <script src="cloud.js?v=46"></script>
+  <!-- 연속학습 방어권 팝업. 어제 하루를 놓쳐서 연속이 끊길 뻔했을 때만
+       뜬다. 예를 누르면 90토큰으로 되살린다. -->
+  <div class="modal-back hidden" id="restore-modal">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="restore-title">
+      <div class="modal-fire">🔥</div>
+      <h2 class="modal-title" id="restore-title">연속이 끊길 뻔했어요</h2>
+      <p class="modal-body" id="restore-body"></p>
+      <p class="modal-cost" id="restore-cost"></p>
+      <button type="button" id="restore-yes" class="primary-btn">되살리기</button>
+      <button type="button" id="restore-no" class="secondary-btn">아니요, 새로 시작할게요</button>
+    </div>
+  </div>
+
+  <script src="script.js?v=46"></script>
 </body>
 </html>

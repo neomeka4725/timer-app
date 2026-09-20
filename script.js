@@ -82,6 +82,13 @@ const streakDays = document.getElementById("streak-days");
 const streakToday = document.getElementById("streak-today");
 const streakFill = document.getElementById("streak-fill");
 const dailyGoalInput = document.getElementById("daily-goal");
+const streakWallet = document.getElementById("streak-wallet");
+
+const restoreModal = document.getElementById("restore-modal");
+const restoreBody = document.getElementById("restore-body");
+const restoreCost = document.getElementById("restore-cost");
+const restoreYes = document.getElementById("restore-yes");
+const restoreNo = document.getElementById("restore-no");
 
 const homeTier = document.getElementById("home-tier");
 const homeTierMedal = document.getElementById("home-tier-medal");
@@ -1311,10 +1318,26 @@ async function refreshHomeTier() {
 // 오늘 칸에 더하고, 내 기록 화면을 열면 진짜 기록으로 다시 맞춘다.
 // 첫 화면을 열 때 인터넷을 안 보는 이유는 토큰 캐시와 같다.
 
+// 지금 누적 토큰을 구한다. 기기에 적어둔 값을 먼저 쓰고, 없으면 이 기기
+// 기록으로 센다. (티어와 같은 값이다)
+function cumulativeTokens(nickname) {
+  const cached = loadTokenCache(nickname);
+  return cached !== null ? cached : calculateTokens(loadRecords());
+}
+
 function renderStreak() {
   const nickname = loadNickname();
   const goal = loadDailyGoal();
-  const info = streakInfo(loadDailyMinutes(nickname), goal, Date.now());
+  const info = streakInfo(
+    loadDailyMinutes(nickname),
+    goal,
+    Date.now(),
+    loadFrozenDays(nickname)
+  );
+
+  // 보유 토큰(쓸 수 있는 토큰)을 보여준다. 누적과 다른 값이다.
+  const wallet = walletTokens(cumulativeTokens(nickname), nickname);
+  streakWallet.textContent = "🪙 " + wallet;
 
   streakDays.textContent = info.days;
   // 연속이 하루라도 이어지고 있으면 불을 켠다.
@@ -1339,6 +1362,68 @@ function renderStreak() {
   }
   fitGoalInput();
 }
+
+// ---- 연속학습 방어권 (되살리기 팝업) ----
+//
+// 어제 하루를 놓쳐서 연속이 끊길 뻔했을 때만 팝업을 띄운다.
+// "되살리기"를 누르면 90토큰을 치르고 어제를 지킨다.
+// 토큰이 모자라면 아예 안 띄운다. 못 누르는 팝업은 약만 오른다.
+let pendingRestoreDay = "";
+
+function maybeOfferRestore() {
+  const nickname = loadNickname();
+  if (!nickname) return;
+  // 타이머를 도는 중이면 방해하지 않는다.
+  if (phase !== "idle") return;
+
+  const goal = loadDailyGoal();
+  const frozen = loadFrozenDays(nickname);
+  const info = restorableInfo(loadDailyMinutes(nickname), goal, Date.now(), frozen);
+  if (!info.restorable) return;
+
+  // 이미 "아니요"로 넘긴 날이면 또 묻지 않는다.
+  if (loadRestoreDeclined(nickname) === info.missedDay) return;
+
+  // 토큰이 모자라면 팝업 대신 카드에 조용히 안내만 남긴다.
+  const wallet = walletTokens(cumulativeTokens(nickname), nickname);
+  if (wallet < STREAK_COST) {
+    streakToday.textContent =
+      `어제를 놓쳤어요 · ${STREAK_COST}토큰이 있으면 되살릴 수 있어요 (지금 ${wallet})`;
+    return;
+  }
+
+  pendingRestoreDay = info.missedDay;
+  restoreBody.textContent =
+    `${info.runDays}일 연속이 끊길 뻔했어요.\n방어권을 쓰면 어제를 지켜서 이어갈 수 있어요.`;
+  restoreCost.textContent =
+    `방어권 ${STREAK_COST}토큰 · 보유 ${wallet}토큰`;
+  restoreModal.classList.remove("hidden");
+}
+
+function closeRestore() {
+  restoreModal.classList.add("hidden");
+  pendingRestoreDay = "";
+}
+
+restoreYes.addEventListener("click", () => {
+  const nickname = loadNickname();
+  const day = pendingRestoreDay;
+  if (!nickname || !day) return closeRestore();
+
+  // 누르는 사이에 값이 바뀌지 않았는지 한 번 더 본다.
+  const wallet = walletTokens(cumulativeTokens(nickname), nickname);
+  if (wallet < STREAK_COST) return closeRestore();
+
+  buyStreakRestore(nickname, day);
+  closeRestore();
+  renderStreak();
+});
+
+restoreNo.addEventListener("click", () => {
+  const nickname = loadNickname();
+  if (nickname && pendingRestoreDay) saveRestoreDeclined(nickname, pendingRestoreDay);
+  closeRestore();
+});
 
 // 칸 너비를 숫자 길이에 맞춘다. 목표 시간 칸과 같은 방식이다.
 function fitGoalInput() {
@@ -2375,6 +2460,7 @@ if (savedNickname === "") {
   showScreen(setupScreen);
   refreshHomeTier();
   renderStreak();
+  maybeOfferRestore();
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
