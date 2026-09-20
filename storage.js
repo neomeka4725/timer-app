@@ -455,12 +455,16 @@ function bumpDailyMinutes(nickname, atMs, minutes) {
 // 안 끝났기 때문이다. 그럴 때는 어제까지로 세고, "오늘 채우면 N+1일"을
 // 보여준다. 여기서 0으로 만들어버리면 아침에 앱을 연 사람이 전부
 // "0일째"를 보게 된다.
-function streakInfo(days, goalMinutes, nowMs) {
+function streakInfo(days, goalMinutes, nowMs, frozenSet) {
   const goal = Math.max(1, Math.round(goalMinutes));
   const map = days || {};
+  const frozen = frozenSet || new Set();
+  // 그날 목표를 채웠거나, 방어권으로 지킨 날이면 "한 날"로 친다.
+  const met = (key) => (map[key] || 0) >= goal || frozen.has(key);
+
   const todayKey = dayKey(nowMs);
   const todayMinutes = map[todayKey] || 0;
-  const doneToday = todayMinutes >= goal;
+  const doneToday = met(todayKey);
 
   let count = 0;
   const cursor = new Date(nowMs);
@@ -469,7 +473,7 @@ function streakInfo(days, goalMinutes, nowMs) {
 
   // 400일이면 충분하다. 혹시 모를 무한 반복도 여기서 막힌다.
   for (let i = 0; i < DAILY_KEEP_DAYS; i++) {
-    if ((map[dayKey(cursor.getTime())] || 0) < goal) break;
+    if (!met(dayKey(cursor.getTime()))) break;
     count += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -483,6 +487,148 @@ function streakInfo(days, goalMinutes, nowMs) {
     left: Math.max(0, goal - todayMinutes),
     progress: Math.max(0, Math.min(100, Math.round((todayMinutes / goal) * 100))),
   };
+}
+
+// ---- 토큰 지갑과 연속학습 방어권 ----
+//
+// 토큰을 "쓰게" 하면 티어가 위험해진다. 골드였는데 방어권 사느라 토큰이
+// 줄어 실버로 내려가면 아무도 안 쓴다. 그래서 숫자를 둘로 나눈다.
+//
+//   누적 토큰 : 지금까지 모은 전부. 티어는 이걸로 정한다. 절대 안 줄어든다.
+//   보유 토큰 : 누적에서 쓴 것을 뺀 값. 방어권을 사면 이게 줄어든다.
+//
+// 쓴 토큰만 따로 기록해두면 보유 = 누적 - 쓴것 으로 언제든 다시 구한다.
+
+// 연속학습 방어권 한 장 값. 공부를 열심히 하는 사람 기준이라 넉넉히 잡는다.
+// (하루 30분 목표면 사흘치 집중량이다)
+const STREAK_COST = 90;
+
+const SPENT_KEY = "wellness-timer-spent";
+
+function loadSpent(nickname) {
+  try {
+    const raw = localStorage.getItem(SPENT_KEY);
+    if (!raw) return 0;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.nickname !== nickname) return 0;
+    const n = Number(saved.spent);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function saveSpent(nickname, spent) {
+  if (!nickname) return;
+  try {
+    localStorage.setItem(
+      SPENT_KEY,
+      JSON.stringify({ nickname: nickname, spent: Math.max(0, Math.round(spent)) })
+    );
+  } catch (err) {
+    // 못 적어도 이번 실행 동안은 그대로 쓴다.
+  }
+}
+
+// 지금 쓸 수 있는 토큰. 누적에서 쓴 것을 뺀다. 음수는 0으로 막는다.
+function walletTokens(cumulative, nickname) {
+  return Math.max(0, Math.round(cumulative) - loadSpent(nickname));
+}
+
+// ---- 방어권으로 지킨 날 ----
+// 방어권을 쓰면 그날을 여기에 적어둔다. streakInfo 가 이 날을 "채운 날"로
+// 쳐서 연속이 이어진다.
+const FROZEN_KEY = "wellness-timer-frozen";
+
+function loadFrozenDays(nickname) {
+  try {
+    const raw = localStorage.getItem(FROZEN_KEY);
+    if (!raw) return new Set();
+    const saved = JSON.parse(raw);
+    if (!saved || saved.nickname !== nickname || !Array.isArray(saved.days)) {
+      return new Set();
+    }
+    return new Set(saved.days);
+  } catch (err) {
+    return new Set();
+  }
+}
+
+function addFrozenDay(nickname, dayStr) {
+  if (!nickname) return;
+  const set = loadFrozenDays(nickname);
+  set.add(dayStr);
+  try {
+    // 오래된 것은 버린다. 연속을 세는 데 필요한 만큼만 남긴다.
+    const days = [...set].sort().slice(-DAILY_KEEP_DAYS);
+    localStorage.setItem(FROZEN_KEY, JSON.stringify({ nickname: nickname, days: days }));
+  } catch (err) {
+    // 저장 실패해도 이번 실행 동안은 set 이 살아 있다.
+  }
+}
+
+// ---- 되살릴 수 있는가 ----
+//
+// "어제 하루만" 놓쳤고, 그 앞으로 이어지던 연속이 있을 때만 되살릴 수 있다.
+// 이틀 이상 놓쳤으면 되살리지 못한다. 하루치 봐주는 것이지, 아무 때나
+// 연속을 사는 게 아니기 때문이다. (한 번에 여러 날을 사면 의미가 없다)
+function restorableInfo(days, goalMinutes, nowMs, frozenSet) {
+  const goal = Math.max(1, Math.round(goalMinutes));
+  const map = days || {};
+  const frozen = frozenSet || new Set();
+  const met = (key) => (map[key] || 0) >= goal || frozen.has(key);
+
+  const y = new Date(nowMs);
+  y.setDate(y.getDate() - 1);
+  const missedDay = dayKey(y.getTime());
+
+  // 어제를 이미 채웠거나 이미 지킨 날이면 되살릴 게 없다.
+  if (met(missedDay)) return { restorable: false, runDays: 0, missedDay: missedDay };
+
+  // 그저께부터 거슬러 올라가며 이어지던 연속의 길이를 잰다.
+  let run = 0;
+  const cursor = new Date(nowMs);
+  cursor.setDate(cursor.getDate() - 2);
+  for (let i = 0; i < DAILY_KEEP_DAYS; i++) {
+    if (!met(dayKey(cursor.getTime()))) break;
+    run += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return { restorable: run >= 1, runDays: run, missedDay: missedDay };
+}
+
+// 방어권을 써서 어제를 지킨다. 값을 치르고 그날을 얼린다.
+// 부르는 쪽에서 보유 토큰이 값보다 많은지 먼저 확인한다.
+function buyStreakRestore(nickname, missedDay) {
+  saveSpent(nickname, loadSpent(nickname) + STREAK_COST);
+  addFrozenDay(nickname, missedDay);
+}
+
+// 되살리기를 "아니오"로 넘긴 날. 같은 날 앱을 다시 열어도 또 묻지 않는다.
+const RESTORE_DECLINED_KEY = "wellness-timer-restore-declined";
+
+function loadRestoreDeclined(nickname) {
+  try {
+    const raw = localStorage.getItem(RESTORE_DECLINED_KEY);
+    if (!raw) return "";
+    const saved = JSON.parse(raw);
+    return saved && saved.nickname === nickname ? String(saved.day || "") : "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function saveRestoreDeclined(nickname, dayStr) {
+  if (!nickname) return;
+  try {
+    localStorage.setItem(
+      RESTORE_DECLINED_KEY,
+      JSON.stringify({ nickname: nickname, day: dayStr })
+    );
+  } catch (err) {
+    // 못 적어도 큰일은 아니다. 다음에 한 번 더 물을 뿐이다.
+  }
 }
 
 // 기록 목록에서 통계를 계산한다.

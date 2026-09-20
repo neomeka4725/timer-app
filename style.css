@@ -1457,6 +1457,66 @@ body.focus-mode .ring-sub {
   border-bottom-color: #4c6fff;
 }
 
+/* 보유 토큰(쓸 수 있는 토큰). 하루 목표 줄 끝에 조용히 붙인다. */
+.streak-wallet {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid #e5e9f2;
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* ---- 되살리기 팝업 ---- */
+/* 화면을 덮는 어두운 막 + 가운데 카드. 연속이 끊길 뻔했을 때만 뜬다. */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 23, 42, 0.55);
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 340px;
+  padding: 26px 22px 20px;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(17, 23, 42, 0.28);
+}
+
+.modal-fire {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.modal-body {
+  margin: 0 0 4px;
+  color: #4b5563;
+  line-height: 1.55;
+}
+
+.modal-cost {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  color: #8a93a6;
+}
+
+.modal-card .primary-btn {
+  margin-bottom: 10px;
+}
+
+
 /* ---- 첫 화면의 "지금 집중 중" 띠 ---- */
 /*
  * 화면 맨 아래 버튼을 눌러야만 볼 수 있는 정보는 아무도 안 본다.
