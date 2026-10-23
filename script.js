@@ -16,6 +16,7 @@ const minutesSlider = document.getElementById("minutes-slider");
 const minutesValue = document.getElementById("minutes-value");
 const quickButtons = document.querySelectorAll(".quick-btn");
 const startBtn = document.getElementById("start-btn");
+const quickHint = document.getElementById("quick-hint");
 const statsBtn = document.getElementById("stats-btn");
 const wakelockWarning = document.getElementById("wakelock-warning");
 
@@ -2318,6 +2319,9 @@ async function renderRank() {
 // ---- 버튼 연결 ----
 
 startBtn.addEventListener("click", () => {
+  // 단축어로 열었을 때 띄운 안내는 이제 할 일을 다 했다.
+  quickHint.classList.add("hidden");
+  startBtn.classList.remove("pulse");
   // 나눠 쓰는 중에 시작하면 옆에서 뭘 하든 성공으로 끝난다.
   // 아예 시작하지 않고 이유를 알려준다.
   // 자판이 열린 채로 눌릴 수 있다. 빈 칸이면 먼저 바로잡는다.
@@ -2499,6 +2503,53 @@ function cleanUpMyStaleChallenge() {
   cloudEndChallenge(nickname).catch(() => {});
 }
 
+// ---- 홈 화면 단축어(위젯)로 열었을 때 ----
+//
+// 웹앱은 진짜 홈 화면 위젯을 못 만든다(위젯은 앱스토어 앱만 된다).
+// 대신 아이폰 "단축어" 앱의 위젯 버튼이 이 앱 주소를 열게 할 수 있다.
+// 주소 끝에 ?min=25 를 붙여 열면 목표 시간을 25분으로 맞춰둔다.
+//
+// 바로 시작하지는 않는다. 아이폰은 사람이 화면을 직접 한 번 눌러줘야
+// 소리와 "화면 안 꺼지게"를 허락해준다. 열자마자 자동으로 시작하면
+// 끝날 때 알림 소리가 안 난다. 폰을 엎어두고 쓰는 앱이라 그건 안 된다.
+// 그래서 시간만 맞추고 "시작하기만 누르세요"라고 안내한다.
+function applyQuickStartParam() {
+  let raw = null;
+  try {
+    raw = new URLSearchParams(location.search).get("min");
+  } catch (err) {
+    return;
+  }
+  if (raw === null) return;
+
+  // 한 번 쓰고 나면 주소에서 지운다. 새로고침할 때 또 맞추지 않게.
+  try {
+    history.replaceState(null, "", location.pathname + location.hash);
+  } catch (err) {
+    // 못 지워도 큰일은 아니다. 시간을 한 번 더 맞출 뿐이다.
+  }
+
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n)) return;
+  // 슬라이더가 받는 범위(1~120분)로 바로잡는다.
+  const minutes = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, n));
+
+  minutesSlider.value = String(minutes);
+  updateMinutesDisplay();
+
+  quickHint.textContent = `⚡ ${minutes}분으로 맞춰뒀어요. 시작하기만 누르면 돼요`;
+  quickHint.classList.remove("hidden");
+  startBtn.classList.add("pulse");
+
+  // 작은 폰에서는 시작하기가 화면 아래에 있다. 보이는 곳으로 끌어온다.
+  // 화면 전환이 맨 위로 올리고 난 다음에 움직여야 해서 잠깐 기다린다.
+  setTimeout(() => {
+    if (!setupScreen.classList.contains("hidden")) {
+      startBtn.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, 350);
+}
+
 const savedNickname = loadNickname();
 if (savedNickname === "") {
   // 처음 온 사람에게는 닉네임부터 묻는다.
@@ -2512,3 +2563,7 @@ if (savedNickname === "") {
   cleanUpMyStaleChallenge();
   checkBoardUpdates();
 }
+
+// 닉네임을 아직 안 정한 사람도 시간은 맞춰둔다. 닉네임을 정하고 나면
+// 맞춰진 시간 그대로 설정 화면이 나온다.
+applyQuickStartParam();

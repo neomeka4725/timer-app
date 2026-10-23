@@ -1828,3 +1828,32 @@ body.focus-mode .ring-sub {
     font-size: 1.05rem;
   }
 }
+
+/* ---- 단축어(위젯)로 열었을 때 ---- */
+/* "시간은 맞춰뒀으니 시작하기만 누르세요" 안내. */
+.quick-hint {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* 시작하기를 은은하게 몇 번 깜빡여서 "여기 누르면 돼"를 알려준다. */
+#start-btn.pulse {
+  animation: startPulse 1.4s ease-in-out 3;
+}
+
+@keyframes startPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 111, 255, 0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(76, 111, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #start-btn.pulse {
+    animation: none;
+  }
+}
